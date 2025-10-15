@@ -1,0 +1,29 @@
+name: Debug context
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  ##############################################################################
+  ##
+  ## Debug job
+  ##
+  ##############################################################################
+
+  Debug_Context:
+    name: Debug received context
+    runs-on: ubuntu-latest
+    # runs-on: ["self-hosted", "m92p"] # Only for organization runners
+    environment: ci_cd_pipeline
+
+    steps:
+      - name: Dump Github context
+        id: github_context_step
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"

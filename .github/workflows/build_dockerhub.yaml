@@ -1,0 +1,81 @@
+##
+## GITHUB ACTIONS PIPELINE
+## Actions to be taken when pushing or PR to a branch
+##
+## Last update: 2024/07/05
+##
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+name: Push or PR to MAIN
+
+permissions:
+  actions: write
+  attestations: write
+  checks: write
+  contents: write
+  id-token: write
+  issues: write
+  packages: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  ###############################################################################
+  ##
+  ## Docker BuildX
+  ##
+  ###############################################################################
+
+  DockerBuild:
+    name: BuildX Docker image
+    runs-on: ["self-hosted", "m92p"]
+    environment: ci_cd_pipeline
+    steps:
+      ########## G E N E R I C   B L O C K ######################################
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      ########## S P E C I F I C   B L O C K ####################################
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        # with:
+        #   buildkitd-flags: --debug
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.CI_DH_USER }}
+          password: ${{ secrets.CI_DH_PAT }}
+
+      - name: Set version variable
+        id: version
+        run: |
+          version=$(cat ${{ vars.CI_VER_FILE }} | grep version | awk '{ print $3 }' | tr -d '"')
+          echo "containerver=$version" >> $GITHUB_OUTPUT
+
+      - name: Extract dockerfile suffix
+        id: suffix
+        run: |
+          archsuffix=$(echo "${{ vars.CI_DOCKERFILE }}" | awk -F. '{print $2}')
+          echo "arch=$archsuffix" >> $GITHUB_OUTPUT
+
+      - name: Build & Push to Docker Hub
+        uses: docker/build-push-action@v5
+        with:
+          file: ${{ vars.CI_DOCKERFILE }}
+          platforms: ${{ vars.CI_PLATFORMS }}
+          push: true
+          tags: ${{ vars.CI_DEST_REPO }}:${{ steps.version.outputs.containerver }}-${{ steps.suffix.outputs.arch }}
