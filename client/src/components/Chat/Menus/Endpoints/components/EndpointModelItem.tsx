@@ -32,6 +32,15 @@ export function EndpointModelItem({ modelId, endpoint, isSelected }: EndpointMod
     modelName = endpoint.assistantNames[modelId];
   }
 
+  try {
+    const endpointKey = (endpoint?.value || endpoint?.name || '').toString().toLowerCase();
+    if (endpointKey === 'ollama' && modelId === 'deepseek-chat') {
+      modelName = 'qwen2.5:8b';
+    }
+  } catch (e) {
+    // no hacemos nada si algo falla; mantenemos el modelName calculado arriba
+  }
+
   return (
     <MenuItem
       key={modelId}
