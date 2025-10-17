@@ -41,17 +41,42 @@ function ModelSelectorContent() {
       }),
     [mappedEndpoints, selectedValues, modelSpecs, endpointsConfig],
   );
-  const selectedDisplayValue = useMemo(
-    () =>
-      getDisplayValue({
-        localize,
-        agentsMap,
-        modelSpecs,
-        selectedValues,
-        mappedEndpoints,
-      }),
-    [localize, agentsMap, modelSpecs, selectedValues, mappedEndpoints],
-  );
+  
+  const selectedDisplayValue = useMemo(() => {
+    // valor por defecto calculado por la utilidad existente
+    let display = getDisplayValue({
+      localize,
+      agentsMap,
+      modelSpecs,
+      selectedValues,
+      mappedEndpoints,
+    });
+
+    try {
+      // buscamos el objeto endpoint seleccionado dentro de mappedEndpoints
+      const selEndpointKey = (selectedValues?.endpoint || '').toString();
+      const selectedEndpointObj =
+        (mappedEndpoints || []).find(
+          (e) => e.value === selEndpointKey || e.name === selEndpointKey,
+        ) || null;
+
+      const endpointKey = (selectedEndpointObj?.value || selectedEndpointObj?.name || '')
+        .toString()
+        .toLowerCase();
+
+      // condición tolerante a mayúsculas/minúsculas
+      if (
+        endpointKey === 'ollama' &&
+        (selectedValues?.model || '') === 'deepseek-chat'
+      ) {
+        display = 'qwen2.5:8b';
+      }
+    } catch (e) {
+      // si hay algún error, devolvemos el display original calculado por getDisplayValue
+    }
+
+    return display;
+  }, [localize, agentsMap, modelSpecs, selectedValues, mappedEndpoints]);
 
   const trigger = (
     <button
