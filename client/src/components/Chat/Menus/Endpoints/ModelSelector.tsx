@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import type { ModelSelectorProps } from '~/common';
+import { ChatProvider } from '~/Providers/ChatContext';
 import { ModelSelectorProvider, useModelSelectorContext } from './ModelSelectorContext';
 import { ModelSelectorChatProvider } from './ModelSelectorChatContext';
 import { renderModelSpecs, renderEndpoints, renderSearchResults } from './components';
