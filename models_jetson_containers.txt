@@ -1,0 +1,123 @@
+Qwen2.5VL:3b
+sudo docker run -it --rm --runtime nvidia \
+  --name ollama-qwen
+  -p 9000:9000 \
+  --shm-size=6g \
+  -v /mnt/nvme/cache/ollama/qwen:/root/.ollama \
+  -v /mnt/nvme/cache:/root/.cache \
+  --mount type=tmpfs,destination=/dev/shm,tmpfs-size=6g \
+  -e OLLAMA_HOST=0.0.0.0:9000 \
+  -e OLLAMA_MODEL=qwen2.5vl:3b \
+  -e OLLAMA_MODELS=/root/.ollama \
+  -e OLLAMA_LOGS=/root/.ollama/ollama.log \
+  -e OLLAMA_CONTEXT_LEN=2048 \
+  -e OLLAMA_NUM_THREADS=$(nproc) \
+  -e OLLAMA_GPU_LAYERS=48 \
+  -e HF_TOKEN=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 \
+  -e HF_HUB_CACHE=/root/.cache/huggingface \
+  ollama:0.12.6-r36.4.tegra-aarch64-cu126-22.04-ollama_0.12.6
+
+sudo jetson-containers run \
+  --name ollama-qwen \
+  -p 9000:9000 \
+  -v /mnt/nvme/cache/ollama/qwen:/root/.ollama \
+  -v /mnt/nvme/cache:/root/.cache \
+  --mount type=tmpfs,destination=/dev/shm,tmpfs-size=4g \
+  -e OLLAMA_HOST=0.0.0.0:9000 \
+  -e OLLAMA_MODEL=qwen2.5vl:3b \
+  -e OLLAMA_MODELS=/root/.ollama \
+  -e OLLAMA_LOGS=/root/.ollama/ollama.log \
+  -e OLLAMA_CONTEXT_LEN=2048 \
+  -e OLLAMA_NUM_THREADS=$(nproc) \
+  -e OLLAMA_GPU_LAYERS=12 \
+  -e OLLAMA_CUDA_ALLOW_SPLIT=1 \
+  -e OLLAMA_TENSOR_TYPE=fp16 \
+  -e OLLAMA_MMAP_SYNC=1 \
+  -e OLLAMA_NO_F16=0 \
+  -e OLLAMA_DISABLE_CUDA_CACHE=1 \
+  -e HF_TOKEN=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 \
+  -e HF_HUB_CACHE=/root/.cache/huggingface \
+  ollama:0.12.6-r36.4.tegra-aarch64-cu126-22.04-ollama_0.12.6
+
+PRODUCCIÓN
+sudo docker run \
+  --name ollama-qwen2.5vl \
+  -d \
+  --restart=always \
+  --runtime nvidia \
+  --gpus all \
+  -p 9000:9000 \
+  -v /mnt/nvme/cache/ollama/llama:/root/.ollama \
+  -v /mnt/nvme/cache:/root/.cache \
+  --mount type=tmpfs,destination=/dev/shm,tmpfs-size=4g \
+  -e OLLAMA_HOST=0.0.0.0:9001 \
+  -e OLLAMA_MODEL=qwen2.5vl \
+  -e OLLAMA_MODELS=/root/.ollama \
+  -e OLLAMA_LOGS=/root/.ollama/ollama.log \
+  -e OLLAMA_CONTEXT_LEN=2048 \
+  -e OLLAMA_NUM_THREADS=$(nproc) \
+  -e OLLAMA_GPU_LAYERS=36 \
+  -e HF_TOKEN=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 \
+  -e HF_HUB_CACHE=/root/.cache/huggingface \
+  ollama:0.12.6-r36.4.tegra-aarch64-cu126-22.04-ollama_0.12.6
+
+
+
+Llama3.2:3b
+docker run -it --rm --runtime nvidia \
+  --name ollama-llama3.2 \
+  --gpus all \
+  -p 9001:9000 \
+  -e OLLAMA_HOST=0.0.0.0:9001 \
+  -e OLLAMA_MODEL=llama3.2:3b \
+  -e OLLAMA_MODELS=/root/.ollama \
+  -e OLLAMA_LOGS=/root/.ollama/ollama.log \
+  -e OLLAMA_CONTEXT_LEN=2048 \
+  -e OLLAMA_NUM_THREADS=$(nproc) \
+  -e OLLAMA_GPU_LAYERS=36 \
+  -e HF_TOKEN=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 \
+  -e HF_HUB_CACHE=/root/.cache/huggingface \
+  -v /mnt/nvme/cache/ollama/llama:/root/.ollama \
+  -v /mnt/nvme/cache:/root/.cache \
+  --mount type=tmpfs,destination=/dev/shm,tmpfs-size=4g \
+  ollama:0.12.6-r36.4.tegra-aarch64-cu126-22.04-ollama_0.12.6
+
+sudo jetson-containers run \
+  --name ollama-llama3.2 \
+  -p 9001:9000 \
+  -v /mnt/nvme/cache/ollama/llama:/root/.ollama \
+  -v /mnt/nvme/cache:/root/.cache \
+  --mount type=tmpfs,destination=/dev/shm,tmpfs-size=2g \
+  --memory=10g --memory-swap=14g \
+  -e OLLAMA_HOST=0.0.0.0:9001 \
+  -e OLLAMA_MODEL=llama3.2:3b \
+  -e OLLAMA_MODELS=/root/.ollama \
+  -e OLLAMA_LOGS=/root/.ollama/ollama.log \
+  -e OLLAMA_CONTEXT_LEN=1024 \
+  -e OLLAMA_NUM_THREADS=$(nproc) \
+  -e OLLAMA_GPU_LAYERS=0 \
+  -e HF_TOKEN=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 \
+  -e HF_HUB_CACHE=/root/.cache/huggingface \
+  ollama:0.12.6-r36.4.tegra-aarch64-cu126-22.04-ollama_0.12.6
+
+PRODUCCIÓN
+sudo docker run \
+  --name ollama-llama3.2 \
+  -d \
+  --restart=always \
+  --runtime nvidia \
+  --gpus all \
+  -p 9001:9000 \
+  -v /mnt/nvme/cache/ollama/llama:/root/.ollama \
+  -v /mnt/nvme/cache:/root/.cache \
+  --mount type=tmpfs,destination=/dev/shm,tmpfs-size=4g \
+  -e OLLAMA_HOST=0.0.0.0:9001 \
+  -e OLLAMA_MODEL=llama3.2:3b \
+  -e OLLAMA_MODELS=/root/.ollama \
+  -e OLLAMA_LOGS=/root/.ollama/ollama.log \
+  -e OLLAMA_CONTEXT_LEN=1024 \
+  -e OLLAMA_NUM_THREADS=$(nproc) \
+  -e OLLAMA_GPU_LAYERS=8 \
+  -e HF_TOKEN=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 \
+  -e HF_HUB_CACHE=/root/.cache/huggingface \
+  ollama:0.12.6-r36.4.tegra-aarch64-cu126-22.04-ollama_0.12.6
