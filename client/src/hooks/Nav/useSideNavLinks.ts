@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Blocks, MCPIcon, AttachmentIcon } from '@librechat/client';
-import { Database, Bookmark, Settings2, ArrowRightToLine, MessageSquareQuote } from 'lucide-react';
+import { Database, Bookmark, Settings2, ArrowRightToLine, MessageSquareQuote, Home, Settings2 } from 'lucide-react';
 import {
   Permissions,
   EModelEndpoint,
@@ -19,7 +19,6 @@ import PromptsAccordion from '~/components/Prompts/PromptsAccordion';
 import Parameters from '~/components/SidePanel/Parameters/Panel';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
 import MCPPanel from '~/components/SidePanel/MCP/MCPPanel';
-import { Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGetStartupConfig } from '~/data-provider';
 import { useHasAccess } from '~/hooks';
@@ -77,6 +76,16 @@ export default function useSideNavLinks({
       icon: Home,          
       id: 'home-assistant',
       onClick: () => navigate('/home-assistant'), // si quieres navegación directa
+    });
+
+     links.push({
+      title: 'com_setup_title',
+      label: '',
+      icon: Settings2,          
+      id: 'setup-lucia',
+      onClick: () => {
+        window.location.href = 'http://localhost:5173/';
+      },
     });
 
     if (
