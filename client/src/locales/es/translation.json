@@ -505,6 +505,7 @@
   "com_sidepanel_hide_panel": "Ocultar Panel",
   "com_sidepanel_manage_files": "Administrar Archivos",
   "com_sidepanel_parameters": "Parámetros",
+  "com_setup_title": "Configurar LUCIA",
   "com_ui_2fa_disable": "Deshabilitar 2FA",
   "com_ui_2fa_disable_error": "Hubo en error deshabilitando la autenticación en dos pasos",
   "com_ui_2fa_enable": "Activa 2FA",
