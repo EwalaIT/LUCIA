@@ -140,3 +140,101 @@ helm/**/.values.yaml
 /.tabnine/
 /.codeium
 *.local.md
+
+
+# == LANGCHAIN - BACKEND ===
+# ==========================
+# Entornos virtuales y config
+# ==========================
+venv/
+.env
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ==========================
+# SQLite y BBDD locales
+# ==========================
+*.db
+agent_memory.db
+*.sqlite3
+*.sqlite
+
+# ==========================
+# Logs y trazas
+# ==========================
+*.log
+logs/
+*.out
+*.err
+langsmith_logs/
+langchain_logs/
+ollama_logs/
+
+# ==========================
+# Uvicorn / Gunicorn / ASGI
+# ==========================
+*.pid
+*.sock
+*.pid.lock
+*.reload
+
+# ==========================
+# Jupyter Notebooks
+# ==========================
+.ipynb_checkpoints/
+*.ipynb
+
+# ==========================
+# Distribuciones y compilación
+# ==========================
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+*.tar.gz
+
+# ==========================
+# Test / Coverage / Reports
+# ==========================
+.coverage
+htmlcov/
+*.cover
+pytest_cache/
+.nox/
+.tox/
+.pytest_cache/
+.coverage.*
+
+# ==========================
+# Caché y modelos locales LLM / LangChain / Ollama
+# ==========================
+.venv/
+.cache/
+.cache_langchain/
+.cache_ollama/
+.models/
+models_local/
+*.onnx
+*.pt
+*.bin
+
+# ==========================
+# IDEs y sistema operativo
+# ==========================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+*.iml
+
+# ==========================
+# Archivos temporales / backups
+# ==========================
+*.bak
+*.tmp
+*.temp
+*.old
