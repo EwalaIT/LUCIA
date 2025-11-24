@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Blocks, MCPIcon, AttachmentIcon } from '@librechat/client';
-import { Database, Bookmark, Settings2, ArrowRightToLine, MessageSquareQuote, Home, Settings2 } from 'lucide-react';
+import { Database, Bookmark, ArrowRightToLine, Settings2, MessageSquareQuote, Home, SlidersHorizontal, BrainCircuit, ListChecks } from 'lucide-react';
 import {
   Permissions,
   EModelEndpoint,
@@ -78,13 +78,33 @@ export default function useSideNavLinks({
       onClick: () => navigate('/home-assistant'), // si quieres navegación directa
     });
 
-     links.push({
+    links.push({
       title: 'com_setup_title',
       label: '',
-      icon: Settings2,          
+      icon: SlidersHorizontal,          
       id: 'setup-lucia',
       onClick: () => {
         window.location.href = 'http://localhost:5173/';
+      },
+    });
+
+    links.push({
+      title: 'com_decisions_title',
+      label: '',
+      icon: BrainCircuit,
+      id: 'decisions-manager',
+      onClick: () => {
+        window.location.href = 'http://localhost:5173/decisions';
+      },
+    });
+
+    links.push({
+      title: 'com_rules_title',
+      label: '',
+      icon: ListChecks,
+      id: 'rules-manager',
+      onClick: () => {
+        window.location.href = 'http://localhost:5173/rules';
       },
     });
 
