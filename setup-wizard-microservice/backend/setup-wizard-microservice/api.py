@@ -6,7 +6,7 @@ from datetime import datetime, time
 
 from models import (
     Base, Company, Zone, Device, Entity,
-    Setup, SetupSchedule, TemperatureRule
+    Setup, SetupSchedule, TemperatureRule, Decision
 )
 from config import SQLALCHEMY_DATABASE_URI
 from ha_ws_client import get_ha_areas, get_ha_devices, get_ha_entities
@@ -653,3 +653,102 @@ def get_setup_schedules():
         })
 
     return jsonify(out)
+
+
+# ============================================================
+#   DECISIONS — AI AGENT MANAGEMENT
+# ============================================================
+@bp.route("/decisions/list", methods=["POST"])
+def list_decisions():
+    """
+    Returns paginated AI agent decisions ordered by creation date
+    POST method for enhanced security
+    Body: { "date": "2025-11-21", "page": 1, "per_page": 10, "sort": "desc" }
+    """
+    db = session()
+    payload = request.json or {}
+    date_filter = payload.get("date")
+    page = int(payload.get("page", 1))
+    per_page = int(payload.get("per_page", 10))
+    sort = payload.get("sort", "desc").lower()
+    
+    if sort not in ("asc", "desc"):
+        return jsonify({"error": "Invalid sort parameter"}), 400
+    
+    query = db.query(Decision)
+    
+    if date_filter:
+        try:
+            from datetime import datetime
+            filter_date = datetime.strptime(date_filter, "%Y-%m-%d")
+            start_of_day = filter_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_of_day = filter_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            query = query.filter(
+                Decision.created_at >= start_of_day.isoformat(),
+                Decision.created_at <= end_of_day.isoformat()
+            )
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+    
+    query = query.order_by(Decision.created_at.asc() if sort == "asc" else Decision.created_at.desc())
+    total = query.count()
+    decisions = query.offset((page - 1) * per_page).limit(per_page).all()
+    
+    out = [
+        {
+            "id": d.id,
+            "goal": d.goal,
+            "reasoning": d.reasoning,
+            "decision_package_json": d.decision_package_json,
+            "action_summary": d.action_summary,
+            "status": d.status,
+            "executed_action": d.executed_action,
+            "target_entity": d.target_entity,
+            "action_result": d.action_result,
+            "confidence": d.confidence,
+            "notes": d.notes,
+            "created_at": d.created_at
+        } for d in decisions
+    ]
+    
+    return jsonify({
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "decisions": out
+    })
+
+
+@bp.route("/decisions/update", methods=["POST"])
+def update_decision():
+    """
+    Update decision confidence and notes
+    POST method for enhanced security
+    Body: { "id": 1, "confidence": 0.8, "notes": "some notes" }
+    """
+    db = session()
+    payload = request.json
+    
+    if not payload or "id" not in payload:
+        return jsonify({"error": "Missing required field: id"}), 400
+    
+    decision_id = payload["id"]
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    
+    if not decision:
+        return jsonify({"error": "Decision not found"}), 404
+    
+    if "confidence" in payload:
+        decision.confidence = float(payload["confidence"])
+    
+    if "notes" in payload:
+        decision.notes = payload["notes"]
+    
+    db.commit()
+    
+    return jsonify({
+        "updated": True,
+        "id": decision.id,
+        "confidence": decision.confidence,
+        "notes": decision.notes
+    })
