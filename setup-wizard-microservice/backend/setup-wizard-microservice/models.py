@@ -100,3 +100,20 @@ class TemperatureRule(Base):
     days = Column(Text)             # JSON string: ["mon","tue","wed"]
     start_time = Column(String(10)) # "08:00"
     end_time = Column(String(10))   # "17:00"
+    
+class Decision(Base):
+    __tablename__ = "decisions"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    goal = Column(Text)
+    reasoning = Column(Text)
+    decision_package_json = Column(Text)
+    action_summary = Column(Text)
+    status = Column(String(20), nullable=False, default='PENDING')
+    executed_action = Column(Text)
+    target_entity = Column(Text)
+    action_result = Column(Text)
+    confidence = Column(Float)
+    notes = Column(Text)
+    created_at = Column(Text, nullable=False, default=lambda: datetime.datetime.utcnow().isoformat())
+
