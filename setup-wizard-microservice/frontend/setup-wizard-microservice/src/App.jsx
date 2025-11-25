@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route } from "react-router-dom"
 import SetupWizard from "./components/SetupWizard"
 import DecisionsManager from "./components/DecisionsManager"
+import RulesManager from "./components/RulesManager"
 
 export default function App() {
 
@@ -21,6 +22,7 @@ export default function App() {
               }
             />
             <Route path="/decisions" element={<DecisionsManager />} />
+            <Route path="/rules" element={<RulesManager />} />
           </Routes>
         </div>
       </div>

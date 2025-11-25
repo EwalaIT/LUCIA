@@ -117,3 +117,15 @@ class Decision(Base):
     notes = Column(Text)
     created_at = Column(Text, nullable=False, default=lambda: datetime.datetime.utcnow().isoformat())
 
+class Rule(Base):
+    __tablename__ = "rules"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    origin_decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=True)
+    rule_text = Column(Text, nullable=False)
+    priority = Column(String(20), nullable=False)  # immediate, mid_term, long_term
+    expires_at = Column(DateTime, nullable=True)
+    created_by = Column(String(20))  # decisor, evaluator, user
+    created_at = Column(DateTime, default=now)
+    active = Column(Boolean, default=True)
+    last_modified = Column(DateTime, nullable=True)
