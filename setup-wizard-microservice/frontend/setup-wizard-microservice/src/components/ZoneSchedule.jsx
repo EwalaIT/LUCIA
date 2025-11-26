@@ -29,24 +29,29 @@ export default function ZoneSchedule({ zones = [], schedules = [], setSchedules 
   // -------------------------------------------------------------
   //  Zonas que tienen al menos una entidad seleccionada
   // -------------------------------------------------------------
-  const selectableZones = (zones || []).filter((z) =>
-    z.devices?.some((d) => d.entities?.some((e) => e.selected))
+  const selectableZones = zones.filter((z) =>
+    z.devices?.some((d) =>
+      d.entities?.some((e) => e.selected === true)
+    )
   );
 
   /* -------------------------------------------------------------
       Inicializar zone_id cuando llegan las zonas
   ------------------------------------------------------------- */
+  const [initialized, setInitialized] = useState(false);
+
   useEffect(() => {
-    if (!selectableZones.length) return;
+    if (!selectableZones.length || initialized) return;
 
     setLocal((prev) => ({
       ...prev,
-      zone_id: prev.zone_id || String(selectableZones[0].id),
+      zone_id: String(selectableZones[0].id),
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zones]);
 
-  
+    setInitialized(true);
+  }, [selectableZones, initialized]);
+
+
   // -------------------------------------------------------------
   //  Gestionar time ranges
   // -------------------------------------------------------------
@@ -175,7 +180,7 @@ export default function ZoneSchedule({ zones = [], schedules = [], setSchedules 
           <SelectField
             label="Zone"
             value={local.zone_id}
-            onChange={(v) => setLocal({ ...local, zone_id: Number(v) })}
+            onChange={(e) => setLocal({ ...local, zone_id: Number(e.target.value) })}
             options={zones
               .sort((a, b) => a.name.localeCompare(b.name))
               .map((z) => ({ value: z.id, label: z.name }))}
@@ -275,7 +280,7 @@ export default function ZoneSchedule({ zones = [], schedules = [], setSchedules 
                 <div className="flex flex-col gap-1">
                   <span className="font-medium capitalize">{s.days}</span>
                   <span className="text-sm opacity-70">
-                    {s.start_time} - {s.end_time} | Zone {s.zone_id}
+                    {s.start_time} - {s.end_time} | Zone {zoneNameMap.get(String(s.zone_id))}
                   </span>
                   <Badge variant="outline" className="w-fit mt-1">
                     {s.temp_min}°C → {s.temp_max}°C
