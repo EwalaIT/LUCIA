@@ -10,7 +10,8 @@ from models import (
 )
 from config import SQLALCHEMY_DATABASE_URI
 from ha_ws_client import get_ha_areas, get_ha_devices, get_ha_entities
-from ha_client import get_states, extract_device_id
+from utils import generate_natural_language_rules
+from ha_client import get_states
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -546,10 +547,8 @@ def bulk_setup_schedules():
     }
     """
     db = session()
-    payload = request.json or {}
-    schedules = payload.get("schedules", [])
 
-     # --- DEBUG: print input payload ---
+    # --- DEBUG: print input payload ---
     try:
         payload = request.get_json(force=True)
         print("\n📥 PAYLOAD /setup/schedules/bulk:")
@@ -570,8 +569,6 @@ def bulk_setup_schedules():
     if len(schedules) == 0:
         print("❌ schedules is empty")
         return jsonify({"error": "No schedules provided"}), 400
-    if not schedules:
-        return jsonify({"saved": False, "error": "No schedules provided"}), 400
 
     # Asegurar que exista company
     company = db.query(Company).first()
@@ -579,43 +576,88 @@ def bulk_setup_schedules():
         return jsonify({"error": "No company defined"}), 400
 
     # Obtener o crear Setup asociado a Company
-    setup = (
-        db.query(Setup)
-        .filter(Setup.company_id == company.id)
-        .first()
-    )
+    setup = db.query(Setup).filter(Setup.company_id == company.id).first()
     if not setup:
         setup = Setup(company_id=company.id, config_name="default")
         db.add(setup)
         db.flush()
 
-    # Borrar schedules anteriores
-    db.query(SetupSchedule).filter(SetupSchedule.setup_id == setup.id).delete()
+    # Empezamos transacción atómica
+    try:
+        # Borrar schedules anteriores del setup
+        db.query(SetupSchedule).filter(SetupSchedule.setup_id == setup.id).delete()
 
-    # Insertar nuevos schedules
-    inserted = 0
-    for s in schedules:
+        inserted_objs = []
+
+        # Insertar nuevos schedules
+        for s in schedules:
+            # Validaciones mínimas y parseo de tiempos
+            try:
+                start_t = datetime.strptime(s["start_time"], "%H:%M").time()
+                end_t = datetime.strptime(s["end_time"], "%H:%M").time()
+            except Exception:
+                db.rollback()
+                return jsonify({"error": f"Invalid time format in: {s}"}), 400
+
+            # normalizar days como string (guardamos tal cual)
+            days_field = s.get("days", "")
+            # guardamos en minúsculas para consistencia
+            if isinstance(days_field, str):
+                days_field_db = days_field.lower()
+            else:
+                # si viene lista -> convertir a "a,b"
+                if isinstance(days_field, (list, tuple, set)):
+                    days_field_db = ",".join([d.lower() for d in days_field])
+                else:
+                    days_field_db = str(days_field).lower()
+
+            schedule = SetupSchedule(
+                setup_id=setup.id,
+                zone_id=int(s["zone_id"]),
+                days=days_field_db,
+                start_time=start_t,
+                end_time=end_t,
+                temp_min=float(s["temp_min"]),
+                temp_max=float(s["temp_max"]),
+                active=True,
+            )
+            db.add(schedule)
+            inserted_objs.append(schedule)
+
+        # Necesitamos flush para que los objetos tengan estado persistente (y, si hay triggers/constraints, fallen ahora)
+        db.flush()
+
+        # Generar reglas en lenguaje natural basadas en los schedules recién insertados
+        rules_to_insert = generate_natural_language_rules(inserted_objs, db)
+
+        # Insertar reglas en tabla rules
+        for r in rules_to_insert:
+            rule = Rule(
+                rule_text=r["rule_text"],
+                priority="long_term",
+                created_by="user",
+                active=True,
+                expires_at=None,
+            )
+            db.add(rule)
+
+        # Commit final (schedules + rules en una sola transacción)
+        db.commit()
+
+        return jsonify({
+            "saved": True,
+            "schedules_count": len(inserted_objs),
+            "rules_generated": len(rules_to_insert),
+        })
+
+    except Exception as exc:
+        # Rollback y log
         try:
-            start_t = datetime.strptime(s["start_time"], "%H:%M").time()
-            end_t = datetime.strptime(s["end_time"], "%H:%M").time()
+            db.rollback()
         except Exception:
-            return jsonify({"error": f"Invalid time format in: {s}"}), 400
-
-        schedule = SetupSchedule(
-            setup_id=setup.id,
-            zone_id=int(s["zone_id"]),
-            days=s["days"],  # string: "monday"
-            start_time=start_t,
-            end_time=end_t,
-            temp_min=float(s["temp_min"]),
-            temp_max=float(s["temp_max"]),
-            active=True,
-        )
-        db.add(schedule)
-        inserted += 1
-
-    db.commit()
-    return jsonify({"saved": True, "count": inserted})
+            pass
+        print("❌ ERROR in bulk_setup_schedules:", exc)
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @bp.route("/setup/schedules", methods=["GET"])

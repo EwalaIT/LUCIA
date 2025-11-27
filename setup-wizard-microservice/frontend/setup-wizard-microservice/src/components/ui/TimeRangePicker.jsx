@@ -43,7 +43,7 @@ export default function TimeRangePicker({ startTime, endTime, onChange, label = 
               type="button"
               variant="outline"
               size="icon"
-              className="w-8 h-8 p-1 flex items-center justify-center"
+              className="!p-0 !px-0 !py-0 w-8 h-8 flex items-center justify-center"
               onClick={onAdd}
             >
               <Plus className="w-4 h-4 text-gray-700 dark:text-gray-200" />
@@ -56,7 +56,7 @@ export default function TimeRangePicker({ startTime, endTime, onChange, label = 
               type="button"
               variant="ghost"
               size="icon"
-              className="w-8 h-8 p-1 flex items-center justify-center text-red-500 hover:text-red-700"
+              className="!p-0 !px-0 !py-0 w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-700"
               onClick={onRemove}
             >
               <Trash2 className="w-4 h-4 text-red-500" />

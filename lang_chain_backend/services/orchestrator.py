@@ -1,11 +1,14 @@
 # services/orchestrator.py
 import asyncio
+import json
 import logging
 from typing import Any, Dict, Optional
 
 from fastapi import FastAPI
 from config import settings
 
+from db.rules import get_formatted_rules_context
+from services.ha_tools import HomeAssistantAPI
 from services.agent_decisor import run_decisor
 from services.decision_executor import async_execute_decision
 from services.agent_evaluator import start_evaluator_loop
@@ -96,29 +99,38 @@ class Orchestrator:
         """
         try:
             ha_instance = observation.get("ha_instance", "ha-primary")
-            context_snapshot = observation.get("value", {})
 
             # 1) Crear contexto enriquecido: añadir memoria histórica
             memory = SQLiteMemoryAdapter(session_id=f"{ha_instance}_context")
             try:
                 memory_vars = await asyncio.to_thread(memory.load_memory_variables, {})
+                history_raw = memory_vars.get("history", [])
+                history = [dict(row) if hasattr(row, 'keys') else row for row in history_raw]
             except Exception:
                 logger.debug("No memory available or load failed; continuing without history.")
-                memory_vars = {}
-            full_context = {"current_state": context_snapshot, "history": memory_vars.get("history", [])}
+                history = []
 
             reason = observation.get("trigger_reason", "observation_update")
-
+            
+            ha_api = HomeAssistantAPI()
+            ha_states = await asyncio.to_thread(ha_api.get_states)
             # 2) Ejecutar decisor (puede devolver id o package)
+            rules_context = get_formatted_rules_context()
+            
+            full_context_for_decisor = {
+                "current_state": ha_states, 
+                "history": history 
+            }
+            
             logger.info("🧠 Running decisor for ha_instance=%s reason=%s", ha_instance, reason)
-            decision_result = await run_decisor(self.app, ha_instance, full_context, reason)
+            decision_result = await run_decisor(self.app, ha_instance="default", context=full_context_for_decisor, reason=reason, rules_context=rules_context)
 
             # Si decisor no produjo nada, intentar fallback rule-based simple
             if not decision_result:
                 logger.info("🔁 No DP from LLM; generating simple rule-based fallback decision.")
-                decision_pkg = self._simple_rule_decision(full_context)
+                decision_pkg = self._simple_rule_decision(full_context_for_decisor)
                 # persist here
-                decision_id = self._persist_decision_safe(decision_pkg, agent_name="decisor-fallback")
+                decision_id = self._persist_decision_safe(decision_pkg)
                 if decision_id is None:
                     logger.error("❌ Fallback decision could not be persisted.")
                     return
@@ -131,7 +143,7 @@ class Orchestrator:
                 else:
                     # asumimos que es el decision_package
                     decision_package = decision_result
-                    decision_id = self._persist_decision_safe(decision_package, agent_name="decisor")
+                    decision_id = self._persist_decision_safe(decision_package)
                     if decision_id is None:
                         logger.error("❌ Persist failed for DP returned by decisor.")
                         return
@@ -148,14 +160,19 @@ class Orchestrator:
 
             # 6️⃣ Guardar en memoria histórica
             try:
-                await asyncio.to_thread(memory.save_context, {"observation": context_snapshot}, {"decision_id": decision_id})
+                # Guardamos el estado completo actual asociado a esta decisión
+                await asyncio.to_thread(
+                    memory.save_context, 
+                    {"observation": ha_states}, 
+                    {"decision_id": decision_id, "goal": decision_package.get("goal")}
+                )
             except Exception:
                 logger.debug("No-op: memory.save_context failed (not fatal).")
 
         except Exception as exc:
             logger.exception("❌ Failed to handle observation: %s", exc)
 
-    def _persist_decision_safe(self, decision_pkg: Dict[str, Any], agent_name: str = "decisor") -> Optional[int]:
+    def _persist_decision_safe(self, decision_pkg: Dict[str, Any]) -> Optional[int]:
         """
         Intenta persistir usando persist_new_decision con distintas firmas posibles.
         Devuelve decision_id o None.
@@ -170,18 +187,21 @@ class Orchestrator:
             # signature antigua: (decision_package_json, agent_name, ...)
             decision_id = persist_new_decision(
                 decision_package_json=dp_json,
-                agent_name=agent_name,
                 goal=decision_pkg.get("goal"),
                 reasoning=decision_pkg.get("chain_of_thought") or decision_pkg.get("reasoning"),
                 confidence=decision_pkg.get("confidence"),
-                context_id=decision_pkg.get("context_id"),
                 status="PENDING",
+                action_summary=decision_pkg.get("action_summary"),
+                executed_action=decision_pkg.get("executed_action"),
+                target_entity=decision_pkg.get("target_entity"),
+                action_result=decision_pkg.get("action_result"),
+                notes=decision_pkg.get("notes"),
             )
             return decision_id
         except TypeError:
             # otra firma: (ha_instance=..., decision_package=...) from your older orchestrator attempt
             try:
-                decision_id = persist_new_decision(ha_instance=agent_name, decision_package=decision_pkg)
+                decision_id = persist_new_decision( decision_package=decision_pkg)
                 return decision_id
             except Exception as e:
                 logger.exception("Persist fallback failed: %s", e)

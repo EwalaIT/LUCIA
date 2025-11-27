@@ -23,7 +23,6 @@ from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
 from db.decisions import persist_new_decision
 from db.prompts import get_active_prompts
-from db.contexts import insert_context
 
 from config import settings
 
@@ -38,21 +37,27 @@ logger.setLevel(settings.log_level.upper())
 # - fetch_prompts_tool: calls get_active_prompts
 # ---------------------------------------------------------------------------
 class InsertDecisionInput(BaseModel):
-    agent_name: str = Field(..., description="Name of the agent performing the decision")
-    goal: Optional[str] = Field(None, description="Optional goal/summary")
-    reasoning: Optional[str] = Field(None, description="Reasoning or chain of thought")
-    decision_package_json: str = Field(..., description="DecisionPackage as JSON string")
-    confidence: Optional[float] = Field(None, description="Optional confidence score")
-    context_id: Optional[int] = Field(None, description="Optional context id")
+    decision_package_json: str
+    goal: Optional[str] = None
+    reasoning: Optional[str] = None
+    confidence: Optional[float] = None
+    action_summary: Optional[str] = None
+    executed_action: Optional[str] = None
+    target_entity: Optional[str] = None
+    action_result: Optional[str] = None
+    notes: Optional[str] = None
 
 
 def insert_decision_tool_func(
-    agent_name: str,
     decision_package_json: str,
     goal: Optional[str] = None,
     reasoning: Optional[str] = None,
     confidence: Optional[float] = None,
-    context_id: Optional[int] = None,
+    action_summary: Optional[str] = None,
+    executed_action: Optional[str] = None,
+    target_entity: Optional[str] = None,
+    action_result: Optional[str] = None,
+    notes: Optional[str] = None,
 ) -> str:
     """
     Tool function used by LangChain to persist a decision.
@@ -60,12 +65,15 @@ def insert_decision_tool_func(
     """
     decision_id = persist_new_decision(
         decision_package_json=decision_package_json,
-        agent_name=agent_name,
         goal=goal,
         reasoning=reasoning,
         confidence=confidence,
-        context_id=context_id,
         status="PENDING",
+        action_summary=action_summary,
+        executed_action=executed_action,
+        target_entity=target_entity,
+        action_result=action_result,
+        notes=notes,
     )
     return f"Decision persisted with id={decision_id}"
 
@@ -93,21 +101,4 @@ fetch_prompts_tool = StructuredTool.from_function(
     func=fetch_prompts_tool_func,
     name="fetch_prompts",
     description="Retrieve active prompts from the DB and return them as JSON string.",
-)
-
-
-class InsertContextInput(BaseModel):
-    context_type: str
-    system_state: str
-
-
-def insert_context_tool_func(context_type: str, system_state: str) -> str:
-    ctx_id = insert_context(context_type, system_state)
-    return f"Context inserted id={ctx_id}"
-
-
-insert_context_tool = StructuredTool.from_function(
-    func=insert_context_tool_func,
-    name="insert_context",
-    description="Insert a memory/context into the contexts table."
 )
