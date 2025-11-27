@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 import requests
 from pydantic import BaseModel, Field
+from db.entities import get_selected_entity_ids
 from langchain_core.tools import StructuredTool
 
 from config import settings
@@ -41,6 +42,32 @@ class HomeAssistantAPI:
         resp = self.session.get(url, timeout=timeout)
         resp.raise_for_status()
         return resp.json()
+    
+    def get_states(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Obtiene los estados de todas las entidades marcadas como 'selected=1' en la BBDD.
+        Devuelve un mapeo {entity_id: HA_state_dict}.
+        """
+        # 1. Obtener IDs seleccionadas de la BBDD
+        selected_ids: List[str] = get_selected_entity_ids()
+        
+        if not selected_ids:
+            logger.warning("No entity IDs selected in the database. Returning empty state.")
+            return {}
+        
+        full_state: Dict[str, Dict[str, Any]] = {}
+        
+        logger.info(f"Fetching states for {len(selected_ids)} selected entities...")
+        
+        # 2. Iterar y obtener el estado individualmente
+        for entity_id in selected_ids:
+            state_data = self.get_state(entity_id)
+            if state_data:
+                # El formato de HA es un diccionario con 'entity_id', 'state', 'attributes', etc.
+                full_state[entity_id] = state_data
+                
+        logger.info(f"Successfully fetched states for {len(full_state)} entities.")
+        return full_state
 
     def call_service(self, domain: str, service: str, entity_id: str, data: Optional[Dict[str, Any]] = None, timeout: float = 10.0) -> Dict[str, Any]:
         """

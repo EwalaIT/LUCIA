@@ -7,7 +7,9 @@ import json
 
 from .agent_decisor import run_decisor
 from db.decisions import persist_new_decision
+from db.rules import get_formatted_rules_context
 from config import settings
+from services.ha_tools import HomeAssistantAPI
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -15,9 +17,6 @@ logger.setLevel(logging.INFO)
 _decisor_task = None
 
 from services.ha_tools import HomeAssistantAPI
-
-
-
 
 async def _decision_loop(app):
     """
@@ -36,8 +35,14 @@ async def _decision_loop(app):
     try:
         while True:
             try:
+                
+                rules_context = get_formatted_rules_context()
+
+                ha_states = await asyncio.to_thread(ha_api.get_state)
+                context = {e["entity_id"]: e["state"] for e in ha_states}
+                
                 # 1) Ejecutar el ciclo del agente decisor
-                result = await run_decisor(app, ha_instance="default", context=context, reason="periodic")
+                result = await run_decisor(app, ha_instance="default", context=context, reason="periodic", rules_context=rules_context)
 
                 if result is None:
                     await asyncio.sleep(settings.decisor_interval)
@@ -49,7 +54,6 @@ async def _decision_loop(app):
                 # 2) Guardar en la tabla decisions
                 decision_id = persist_new_decision(
                     decision_package_json=dp_json,
-                    agent_name="decisor",
                     goal=result.get("goal"),
                     reasoning=result.get("reasoning"),
                     confidence=result.get("confidence"),
