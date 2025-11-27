@@ -42,6 +42,14 @@ def _build_prompt(rules_context: str, current_time: str) -> str:
         - **Current System Time:** {current_time}
         - **Active Rules & Schedules (Highest Priority):**
         {rules_context}
+        
+        ### CONTEXT FACTORS TO CONSIDER
+        For every decision, you MUST analyze the following factors against the active rules:
+        1. **Temperature/Humidity Sensors (e.g., `sensor.out_temperature`):** Use actual environmental conditions.
+        2. **Actuators & Switches (e.g., `switch.office_1_switch`):** Check the state (`on/off`) of all non-climate power switches. Use `turn_on` or `turn_off` for these.
+        3. **Climate Entities (e.g., `climate.thermostat_r_d_i`):** Check the current operation (`heat/off`) and the `current_temperature` vs. the `temperature` setpoint. Use `set_temperature` for adjustments.
+        4. **Occupancy Status:** Infer presence (or lack thereof) from available sensors or external context (e.g., `Office 1 Switch` is `off` suggests no occupancy/activity). **Efficiency priority is extremely high when zones are inferred to be empty.**
+        5. **Schedule & Bounds:** Apply the time-based rules (`start_time`/`end_time`) and the prescribed temperature limits (`temp_min`/`temp_max`) from the rules context.
 
         ### DECISION HIERARCHY (Order of Precedence)
         1. **SAFETY:** Never execute an action that endangers equipment or humans.
