@@ -129,13 +129,27 @@ def execute_decision(decision_id: int, db_path: Optional[str] = None, ha_api: Op
 
             if not target or "." not in target:
                 raise ValueError(f"Invalid target_entity: {target}")
-
+            
             domain = target.split(".", 1)[0]
             service = action_name
-            # If service is like "set_temperature" and domain == "climate", HA expects service 'set_temperature'
-            # We'll call with full payload.
+
+            if domain == "climate" and service == "set_temperature":
+                # Home Assistant espera 'temperature', no 'value' para climate services.
+                # Aseguramos que el parámetro correcto se pasa al API.
+                if "value" in params:
+                    params["temperature"] = params.pop("value")
+                # HA necesita el entity_id en el cuerpo de la llamada para el servicio set_temperature
+                params["entity_id"] = target
+                # Nota: HomeAssistantAPI.call_service ya maneja entity_id en la URL/cuerpo si es necesario, 
+                # pero es mejor asegurarnos que 'temperature' esté presente si fue pasado como 'value'.
+                if "temperature" not in params and "target_temp" in action:
+                    params["temperature"] = action["target_temp"]
+
             logger.info("Calling HA service %s.%s for %s params=%s", domain, service, target, params)
-            res = ha.call_service(domain=domain, service=service, entity_id=target, data=params)
+            
+            # call_service internamente manejará la estructura final JSON para el API de HA
+            res = ha.call_service(domain=domain, service=service, entity_id=target, data=params) 
+            
             action_results.append({"action": action, "result": res, "status": "OK"})
             logger.info("Action executed OK for decision %s: %s", decision_id, action)
         except Exception as e:
