@@ -3,11 +3,11 @@ import logging
 import asyncio
 import json
 from typing import Optional, Any, Dict
+from datetime import datetime, timezone
 
 from config import settings
 from langchain_core.language_models import BaseLanguageModel
-from langchain_ollama import ChatOllama
-from langchain.agents import create_agent
+from langchain_core.prompts import ChatPromptTemplate
 
 # Tools (HA, VLM, Safety)
 from services.ha_tools import (
@@ -24,111 +24,147 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def _build_prompt() -> str:
+def _build_prompt(rules_context: str, current_time: str) -> str:
     """
-    Returns the system message content for the Energy Efficiency Decisor Agent.
-    This establishes the role, reasoning process, required JSON format, and mandatory safety protocol.
+    Builds the dynamic system prompt for the Energy Efficiency Decisor Agent.
+    
+    Args:
+        rules_context (str): A natural language string containing active rules and schedules.
+        current_time (str): The current ISO timestamp and Day of Week.
     """
-    return (
-        "You are an expert Energy Efficiency and Device Control Agent. Your primary function is to optimize resource consumption based on natural language instructions, context, and environment variables.\n"
-        "**Protocol:** You must use rigorous, step-by-step internal reasoning and ONLY utilize the available tools (Device State Retrieval, Service Execution, or Vision/VLM). Do not perform calculations or estimations without using a tool if a tool is provided for that purpose.\n"
-        "**Required Output Format:** You MUST return a single, valid JSON object named 'DecisionPackage' with the following fields:\n"
-        " - **chain_of_thought (string):** A detailed, professional explanation of your logic, state interpretation, and decision path.\n"
-        " - **suggested_actions (list of objects):** A list of final action objects, each containing {action, target_entity, parameters, rationale}.\n"
-        "**Mandatory Safety Chain:**\n"
-        "1. **Safety Check:** Before concluding and executing any real action, you MUST call the 'safety_check' tool, passing the entire DecisionPackage JSON (your intended output) as input.\n"
-        "2. **Decision Logging:** If the 'safety_check' confirms the actions are safe, you MUST call the 'insert_decision' tool to log the DecisionPackage.\n"
-        "Your final response to the user query MUST be the complete, valid DecisionPackage JSON object."
-    )
+    return f"""
+        ### ROLE & OBJECTIVE
+        You are the **Lead Energy Efficiency & Control Orchestrator** for an Intelligent Building.
+        Your goal is to optimize energy consumption while strictly maintaining comfort standards defined by the active rules.
+        You operate in a backend loop. Your output is read by a machine, not a human.
 
+        ### OPERATIONAL CONTEXT
+        - **Current System Time:** {current_time}
+        - **Active Rules & Schedules (Highest Priority):**
+        {rules_context}
+
+        ### DECISION HIERARCHY (Order of Precedence)
+        1. **SAFETY:** Never execute an action that endangers equipment or humans.
+        2. **SHORT-TERM RULES:** Immediate overrides provided in the context above.
+        3. **SCHEDULES/MID-TERM RULES:** Standard operating windows.
+        4. **GENERAL EFFICIENCY:** If no rule forbids it, optimize for lowest energy use.
+
+        ### TOOLS & PROTOCOL
+        You have access to the **Decision Safety Check Tool**.
+        1. **Data Analysis:** The current state and context are provided below. Analyze this data against 'Active Rules'.
+        2. **Formulation:** Define necessary actions (if any) in the `suggested_actions` list.
+        3. **Verification (MANDATORY for ACTION):** If `decision_type` is **ACTION**, you MUST call the `safety_check` tool with the *entire proposed DecisionPackage JSON* as input before finalizing.
+        4. **Final Output (MANDATORY):** Your last response MUST ONLY be the **RAW JSON Object** of the DecisionPackage.
+
+        ### OUTPUT FORMAT SPECIFICATION
+        Your final response must be a **RAW JSON Object** (no markdown formatting, no ```json wrappers).
+        Structure:
+        {{{{
+        "chain_of_thought": "REQUIRED: Step-by-step reasoning citing specific rules ID or sensor values that justifies the entire decision. MUST BE PRESENT.",
+        "decision_type": "ACTION" | "NO_ACTION",
+        "suggested_actions": [
+            {{{{
+            "action": "turn_off | set_temperature | ...",
+            "target_entity": "entity_id",
+            "parameters": {{{{ "value": ... }}}},
+            "rationale": "Direct compliance with Rule #2 regarding office hours."
+            }}}}
+        ],
+        "confidence": 0.0 to 1.0,
+        "goal": "Brief summary of what this decision achieves"
+        }}}}
+    """
 
 def create_decisor_agent(llm: BaseLanguageModel):
     """
     Crea y devuelve un agente decisor basado en LangChain v1.x.
     Usa el método canónico create_agent, que devuelve un Runnable.
     """
-    system_prompt = _build_prompt()
+    system_prompt = ("You are the Lead Energy Efficiency & Control Orchestrator for an Intelligent Building. "
+        "You analyze rules, sensor values, and contexts to propose actions "
+        "that optimize heating, cooling, lighting and energy efficiency.")
 
     tools = [
-        get_current_state_tool,
-        call_service_tool,
-        vlm_fetch_tool,
+        # get_current_state_tool,
+        # call_service_tool,
+        # vlm_fetch_tool,
         safety_check_tool,
     ]
 
     try:
-        llm = ChatOllama(
-            base_url=str(settings.ollama_url),
-            model=settings.ollama_model,
-        )
-        agent = create_agent(
-            llm,
-            tools=tools,
-            system_prompt=system_prompt,
-        )
-        logger.info("✅ Decisor Agent creado correctamente con create_agent().")
-        return agent
+        llm_with_tools = llm.bind_tools(tools)
+
+        logger.info("✅ Decisor Agent (LLM + Tools) creado correctamente.")
+        return llm_with_tools
+
     except Exception as e:
         logger.exception("❌ Error al crear el Decisor Agent: %s", e)
         raise
 
 
-def _extract_json_from_text(raw: str) -> dict:
-    """
-    Attempts to find a JSON object inside raw text. Uses a simple but robust strategy:
-    - finds the first '{' and the matching closing '}' by scanning (handles nested braces).
-    Raises ValueError on failure.
-    """
-    json_candidates = re.findall(r'\{.*\}', raw, flags=re.DOTALL)
-    for candidate in json_candidates:
-        try:
-            return json.loads(candidate)
-        except json.JSONDecodeError:
-            continue
-    raise ValueError(f"No JSON object could be extracted from agent output: {raw[:200]}")
-
-
-async def run_decisor(app, ha_instance: str, context: dict, reason: str = "observation") -> Optional[Dict[str, Any]]:
+async def run_decisor(app, ha_instance: str, context: dict, reason: str = "observation", rules_context: str = "",) -> Optional[Dict[str, Any]]:
     """
     Asynchronously run the Decisor agent, persist the produced decision, and return a dict:
     { "decision_id": int, "decision_package": dict }
     """
-    agent = getattr(app.state, "agents", {}).get("decisor")
-    if not agent:
-        logger.error("Decisor agent not available in app.state.agents")
-        return None
+    llm_with_tools = getattr(app.state, "agents", {}).get("decisor")
 
-    # Build agent input
+    current_time = datetime.now(timezone.utc).isoformat()
+    dynamic_prompt = _build_prompt(rules_context, current_time)
+     
+    if not llm_with_tools:
+        logger.error("Decisor agent (LLM+Tools) not available in app.state.agents")
+        return None
+    
+   # --- 1. Formatear el contexto de la entidad ---
+    formatted_context_str = _format_context_for_agent(context)
+    
+    logger.info("This is the context formated: %s", formatted_context_str)
+
+    # --- 2. Crear el Prompt Template (en cada ciclo) ---
+    # Usamos el dynamic_prompt_spec como el System Prompt para inyectar todas las reglas y especificaciones
+    prompt_template = ChatPromptTemplate.from_messages([
+        ("system", dynamic_prompt),
+        # El mensaje humano solo contiene el contexto de la invocación
+        ("human", "{input}"),
+    ])
+
+    # --- 3. Construir la cadena completa del Agente para esta invocación ---
+    agent_chain = prompt_template | llm_with_tools
+    
+    # --- 4. Construir el input para el mensaje 'human' ---
     input_text = (
         f"Trigger reason: {reason}\n"
         f"HA instance: {ha_instance}\n"
-        f"Context snapshot: {json.dumps(context, ensure_ascii=False)}\n"
+        f"Context snapshot:\n{formatted_context_str}\n"
         "Produce a DecisionPackage JSON as specified."
     )
 
     # Invoke the agent in thread to avoid blocking
     try:
-        result = await asyncio.to_thread(lambda: agent.invoke({"input": input_text}))
+        # La cadena (prompt | llm_with_tools) espera un dict con la clave 'input'
+        result = await asyncio.to_thread(lambda: agent_chain.invoke({"input": input_text}))
     except Exception as e:
         logger.exception("Error invoking decisor agent: %s", e)
         return None
-
-    # Normalize result -> raw text
+    
     raw = ""
-    try:
-        if isinstance(result, dict):
-            # Various langchain versions might return 'output' or 'messages'
-            if "output" in result:
-                raw = result["output"]
-            elif "messages" in result:
-                msgs = result["messages"]
-                raw = getattr(msgs[-1], "content", str(msgs[-1]))
-            else:
-                raw = str(result)
-        else:
-            raw = str(result)
-    except Exception:
+    
+    # 1. Intentar acceder al atributo 'content' (típico de AIMessage)
+    if hasattr(result, "content"):
+        raw = result.content
+    # 2. Si es un diccionario (menos común, pero manejamos)
+    elif isinstance(result, dict) and 'output' in result:
+        raw = result['output']
+    # 3. Fallback a string
+    else:
         raw = str(result)
+        
+    # 4. Limpieza (Ollama a veces añade basura antes o después del JSON)
+    # Buscamos y extraemos el bloque JSON si el modelo falló en modo `format="json"`.
+    # Esto es manejado por _extract_json_from_text, pero forzamos la conversión a str primero.
+    if not isinstance(raw, str):
+        raw = str(raw)
 
     # Try to extract JSON from raw text
     try:
@@ -136,16 +172,20 @@ async def run_decisor(app, ha_instance: str, context: dict, reason: str = "obser
     except Exception as e:
         logger.exception("Failed to extract DecisionPackage JSON from agent output: %s", e)
         # persist a raw fallback decision so operator can inspect
-        raw_pkg = {"raw_output": raw}
+        raw_pkg = {"raw_output": raw, "chain_of_thought": "Failed to parse valid JSON from LLM output."}
         dp_json_str = json.dumps(raw_pkg, ensure_ascii=False)
+        
+        action_summary = "Parsing failed: RAW OUTPUT stored."
+        
         decision_id = persist_new_decision(
             decision_package_json=dp_json_str,
-            agent_name="decisor",
-            goal=None,
-            reasoning="failed_parse",
+            goal="Failed to parse decision package",
+            reasoning=raw_pkg.get("chain_of_thought"),
             confidence=None,
-            context_id=None,
             status="PENDING",
+            action_summary=action_summary,
+            target_entity=None,
+            executed_action=None,
         )
         return {"decision_id": decision_id, "decision_package": raw_pkg}
 
@@ -158,22 +198,124 @@ async def run_decisor(app, ha_instance: str, context: dict, reason: str = "obser
         dp["_validation_error"] = str(e)
 
     # Persist decision
+    actions = dp.get("suggested_actions", [])
+    
+    if actions and dp.get("decision_type") == "ACTION":
+        # Usamos la primera acción para la BBDD
+        first_action = actions[0]
+        target_entity = first_action.get("target_entity")
+        executed_action = first_action.get("action")
+        # Creamos un resumen simple
+        action_summary = f"{executed_action} on {target_entity}"
+    elif dp.get("decision_type") == "NO_ACTION":
+        action_summary = "NO_ACTION determined by LLM."
+        target_entity = None
+        executed_action = None
+    else:
+        action_summary = f"Unknown decision type: {dp.get('decision_type')}"
+        target_entity = None
+        executed_action = None
+        
+    # Persist decision
     try:
         dp_json_str = json.dumps(dp, ensure_ascii=False)
         decision_id = persist_new_decision(
             decision_package_json=dp_json_str,
-            agent_name="decisor",
             goal=dp.get("goal"),
             reasoning=dp.get("chain_of_thought"),
             confidence=dp.get("confidence"),
-            context_id=None,
             status="PENDING",
-            decision_type=dp.get("decision_type"),
-            zone_id=dp.get("zone_id"),
+            # NUEVOS CAMPOS
+            action_summary=action_summary,
+            target_entity=target_entity,
+            executed_action=executed_action,
         )
-        logger.info("Decisor produced decision id=%s", decision_id)
     except Exception as e:
         logger.exception("Failed to persist decision: %s", e)
         return None
 
     return {"decision_id": decision_id, "decision_package": dp}
+
+
+def _extract_json_from_text(raw: str) -> dict:
+    """
+    Extracts the FIRST valid JSON object from text using brace-scanning.
+    This handles nested objects and random text before/after.
+    """
+    start = raw.find("{")
+    if start == -1:
+        raise ValueError("No opening '{' found in LLM output.")
+
+    depth = 0
+    for i in range(start, len(raw)):
+        if raw[i] == "{":
+            depth += 1
+        elif raw[i] == "}":
+            depth -= 1
+            if depth == 0:
+                candidate = raw[start:i+1]
+                try:
+                    return json.loads(candidate)
+                except json.JSONDecodeError:
+                    break  # try next possible JSON
+
+    raise ValueError(f"Could not extract JSON object from: {raw[:200]}")
+
+
+def _format_context_for_agent(full_context: Dict[str, Any]) -> str:
+    """
+    Simplifica el diccionario de contexto completo (estado actual + memoria)
+    a un string estructurado en lenguaje natural para el Agente Decisor.
+    """
+    lines = []
+
+    # --- A) ESTADO ACTUAL SIMPLIFICADO ---
+    current_state = full_context.get("current_state", {})
+    lines.append("=== CURRENT ENTITY STATES ===")
+
+    for entity_id, ha_data in current_state.items():
+        if not isinstance(ha_data, dict):
+            # Caso fallback: si solo se pasó el estado
+            lines.append(f"- **{entity_id}**: State: {ha_data}")
+            continue
+
+        state = ha_data.get("state", "unknown")
+        attrs = ha_data.get("attributes", {})
+
+        # Extracción de atributos clave para el LLM
+        unit = attrs.get("unit_of_measurement", "")
+        friendly_name = attrs.get("friendly_name", entity_id)
+
+        # Datos extra relevantes para el LLM (ej. temperatura objetivo, ocupación)
+        extra_data = []
+        if 'temperature' in attrs and entity_id.startswith("climate"):
+            extra_data.append(f"Set: {attrs['temperature']}°C")
+        if 'current_temperature' in attrs and entity_id.startswith("climate"):
+            extra_data.append(f"Current: {attrs['current_temperature']}°C")
+
+        extra_str = f" ({', '.join(extra_data)})" if extra_data else ""
+
+        lines.append(f"- **{friendly_name}** ({entity_id}): **State: {state} {unit}**{extra_str}")
+
+    # --- B) HISTORIAL DE DECISIONES SIMPLIFICADO ---
+    history = full_context.get("history", [])
+    if history:
+        lines.append("\n=== RECENT HISTORY (Observation -> Decision) ===")
+        # Mostrar solo las 3 entradas más recientes
+        for entry in history[-3:]:
+            obs_state = entry.get("observation", {}).get("current_state", {})
+            decision_id = entry.get("decision_id", "N/A")
+            timestamp = entry.get("timestamp", "N/A")
+
+            # Simple summarization of the observation
+            temp_status = next(
+                (f"Temp: {obs.get('state')}" for ent, obs in obs_state.items() if 'temp' in ent), 
+                "N/A"
+            )
+
+            lines.append(f"[{decision_id}] {timestamp}")
+            lines.append(f"  Obs: {temp_status} | Dec: {entry.get('goal', 'Optimization')}")
+    else:
+        lines.append("\n=== RECENT HISTORY (Observation -> Decision) ===\n- No historical context available.")
+
+    return "\n".join(lines)

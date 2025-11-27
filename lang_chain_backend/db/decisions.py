@@ -20,22 +20,22 @@ def validate_decision_package(dp: Dict[str, Any]) -> bool:
     Returns True if valid.
     """
     if not isinstance(dp, dict):
-        raise ValueError("DecisionPackage must be a JSON object (dict).")
+        raise ValueError("DecisionPackage must be an object.")
 
     if "chain_of_thought" not in dp or not isinstance(dp["chain_of_thought"], str):
-        raise ValueError("DecisionPackage missing 'chain_of_thought' (string).")
+        raise ValueError("Missing chain_of_thought (string).")
 
     if "suggested_actions" not in dp or not isinstance(dp["suggested_actions"], list):
-        raise ValueError("DecisionPackage missing 'suggested_actions' (list).")
+        raise ValueError("Missing suggested_actions (list).")
 
     for idx, a in enumerate(dp["suggested_actions"]):
         if not isinstance(a, dict):
-            raise ValueError(f"suggested_actions[{idx}] must be an object.")
+            raise ValueError(f"suggested_actions[{idx}] must be object.")
         if "action" not in a and "service" not in a:
             raise ValueError(f"suggested_actions[{idx}] missing 'action' or 'service'.")
         if "target_entity" not in a and "entity_id" not in a:
             raise ValueError(f"suggested_actions[{idx}] missing 'target_entity' or 'entity_id'.")
-
+        
     return True
 
 
@@ -47,35 +47,51 @@ def validate_decision_package(dp: Dict[str, Any]) -> bool:
 # ---------------------------------------------------------------------------
 def persist_new_decision(
     decision_package_json: str,
-    agent_name: str,
     goal: Optional[str] = None,
     reasoning: Optional[str] = None,
     confidence: Optional[float] = None,
-    context_id: Optional[int] = None,
     status: str = "PENDING",
-    decision_type: Optional[str] = None,
-    zone_id: Optional[int] = None,
+    action_summary: Optional[str] = None,
+    executed_action: Optional[str] = None,
+    target_entity: Optional[str] = None,
+    action_result: Optional[str] = None,
+    notes: Optional[str] = None,
 ) -> int:
     """
     Insert a new decision record into decisions table, returns decision_id.
     """
     conn = _get_conn()
     try:
-        conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        ts = datetime.now().isoformat()
+        created_at = datetime.now().isoformat()
+
         cur.execute(
             """
             INSERT INTO decisions (
-                timestamp, agent_name, goal, reasoning, decision_package_json, status, confidence, context_id, decision_type, zone_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                goal, reasoning, decision_package_json, action_summary,
+                status, executed_action, target_entity, action_result,
+                confidence, notes, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?); 
             """,
-            (ts, agent_name, goal, reasoning, decision_package_json, status, confidence, context_id, decision_type, zone_id),
+            (
+                goal,
+                reasoning,
+                decision_package_json,
+                action_summary,
+                status,
+                executed_action,
+                target_entity,
+                confidence,
+                notes,
+                created_at,
+            ),
         )
+
         conn.commit()
-        decision_id = cur.lastrowid
-        logger.info(f"🧠 New decision persisted id={decision_id} agent={agent_name} status={status}")
-        return decision_id
+        new_id = cur.lastrowid
+        logger.info(f"🧠 New decision inserted id={new_id} status={status}")
+        return new_id
+
     finally:
         conn.close()
 

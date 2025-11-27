@@ -13,7 +13,8 @@ from db.mcp_memory import init_db as mcp_init_db
 from config import settings
 
 # LLM wrappers
-from langchain_ollama import OllamaLLM as Ollama
+from langchain_community.llms import Ollama
+from langchain_ollama import ChatOllama
 
 # Agents / workers
 from services.agent_decisor import create_decisor_agent
@@ -94,8 +95,11 @@ async def startup_event():
     try:
         logger.info("Initializing Ollama LLM (primary)...")
         # Some Ollama wrappers accept base_url/model; adapt to your installed package
-        llm = Ollama(base_url=str(settings.ollama_url), model=settings.ollama_model, timeout=15)
+        llm = ChatOllama(base_url=str(settings.ollama_url), model=settings.ollama_model, timeout=15, format="json",)
         logger.info("✅ Ollama LLM initialized successfully.")
+        if not hasattr(llm, 'bind_tools'):
+         logger.error("ChatOllama no tiene 'bind_tools'. Por favor, actualiza langchain-core/langchain-community.")
+         raise Exception("LLM class incompatible.")
     except Exception as exc:
         logger.exception("❌ CRITICAL: Ollama initialization failed. Aborting startup.")
         # Cerrar cliente antes de relanzar si falla todo
