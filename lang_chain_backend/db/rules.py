@@ -1,5 +1,6 @@
 # db/rules.py
 from datetime import datetime
+from typing import Optional
 from .connection import _get_conn
 
 PRIORITY_ORDER = {
@@ -31,7 +32,8 @@ def get_active_rules() -> list[dict]:
             END ASC,
             id ASC
     """, (now,)).fetchall()
-
+    
+    conn.close()
     return [dict(row) for row in rows]
 
 
@@ -47,7 +49,8 @@ def get_active_schedules() -> list[dict]:
         FROM setup_schedule
         WHERE active = 1
     """).fetchall()
-
+    
+    conn.close()
     return [dict(row) for row in rows]
 
 
@@ -69,3 +72,39 @@ def get_formatted_rules_context() -> str:
         lines.append(f"[{pr.upper()}]{exp_info}: {txt}")
 
     return "\n".join(lines)
+
+
+def create_new_rule(rule_text: str, priority: str, expires_at: Optional[str] = None) -> int:
+    """Crea una nueva regla en la DB y devuelve el ID."""
+    conn = _get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO rules (rule_text, priority, expires_at, created_at, active) VALUES (?, ?, ?, ?, 1)",
+        (rule_text, priority, expires_at, datetime.utcnow().isoformat())
+    )
+    conn.commit()
+    conn.close()
+    return cur.lastrowid
+
+
+def modify_existing_rule(rule_id: int, new_rule_text: str, new_priority: str, new_expires_at: Optional[str] = None) -> bool:
+    """Modifica el texto, prioridad y expiración de una regla existente."""
+    conn = _get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE rules SET rule_text = ?, priority = ?, expires_at = ? WHERE id = ?",
+        (new_rule_text, new_priority, new_expires_at, rule_id)
+    )
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
+
+
+def delete_rule_by_id(rule_id: int) -> bool:
+    """Elimina una regla de la DB por su ID."""
+    conn = _get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM rules WHERE id = ?", (rule_id,))
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
