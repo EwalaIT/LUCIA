@@ -17,11 +17,12 @@ from langchain_ollama import ChatOllama
 
 # Agents / workers
 from services.agent_decisor import create_decisor_agent
+from services.agent_evaluator import create_evaluator_agent
 from services.agent_db_query import create_db_query_agent
 from services.orchestrator import Orchestrator
 
 # Routers
-from app.routers import agent_decisor, agent_db_query, execution, observations, websockets
+from app.routers import agent_decisor, agent_db_query, execution, agent_evaluator, observations, websockets
 
 # ---------------------------
 # Logging
@@ -104,11 +105,13 @@ async def startup_event():
     # 4) Create singleton agent executors (synchronous construction expected)
     try:
         decisor_agent = create_decisor_agent(llm=llm)
+        evaluator_agent = create_evaluator_agent(llm=llm)
         db_query_agent = create_db_query_agent(llm=llm, db_path=str(settings.db_path))
 
         app.state.agents = {
             "llm": llm,
             "decisor": decisor_agent,
+            "evaluator": evaluator_agent,
             "db_query": db_query_agent,
         }
         logger.info("✅ Singleton agents ready and stored in app.state.agents.")
@@ -174,6 +177,7 @@ app.include_router(observations.router, prefix="/api", tags=["Observations"])
 app.include_router(agent_decisor.router, prefix="/agents/decisor", tags=["Decisor Agent"])
 app.include_router(agent_db_query.router, prefix="/agents/db", tags=["DB Query Agent"])
 app.include_router(execution.router, prefix="/api/decisions", tags=["Execution"])
+app.include_router(agent_evaluator.router, prefix="/api", tags=["Evaluator Agent"])
 app.include_router(websockets.router, tags=["WebSockets"])
 
 # ---------------------------
