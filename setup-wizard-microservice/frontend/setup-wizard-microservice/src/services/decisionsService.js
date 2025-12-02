@@ -41,3 +41,21 @@ export const updateDecision = async (id, confidence, notes) => {
         throw error
     }
 }
+
+/**
+ * Retrieves the generated rule proposals and CoT for a given decision.
+ * POST /decisions/proposals
+ * body: { decision_id }
+*/
+export const getRuleProposals = async (decision_id) => {
+    try {
+        const res = await axios.post(`${API_BASE}/decisions/proposals`, {
+            decision_id,
+        })
+        // Devuelve { decision_id, status, is_ready, rule_proposals_json, rule_cot }
+        return res.data
+    } catch (error) {
+        console.error(`Error fetching rule proposals for ID ${decision_id}:`, error)
+        throw error
+    }
+}
