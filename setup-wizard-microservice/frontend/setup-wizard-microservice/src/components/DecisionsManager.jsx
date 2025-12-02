@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Calendar, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
 import { getDecisions, updateDecision } from "../services/decisionsService";
 import DecisionBubble from "./DecisionBubble";
+import RulesProposalsModal from "./RulesProposalsModal";
 
 export default function DecisionsManager() {
     const [decisions, setDecisions] = useState([]);
@@ -13,6 +14,8 @@ export default function DecisionsManager() {
     const [sort, setSort] = useState("desc");
     const [total, setTotal] = useState(0);
     const chatEndRef = useRef(null);
+    const containerRef = useRef(null);
+    const [decisionToReview, setDecisionToReview] = useState(null);
 
     useEffect(() => { loadDecisions() }, [selectedDate, page, sort]);
 
@@ -23,7 +26,12 @@ export default function DecisionsManager() {
             setDecisions(data.decisions);
             setTotal(data.total);
             setError(null);
-            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+            setTimeout(() => {
+            if (sort === "desc") {
+                chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            } else {
+                containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+            };})
         } catch (err) {
             setError("Failed to load decisions");
         } finally {
@@ -33,6 +41,16 @@ export default function DecisionsManager() {
 
     const handleUpdateDecision = async (id, confidence, notes) => {
         await updateDecision(id, confidence, notes);
+        loadDecisions();
+    };
+
+    const handleReviewRules = (decisionId) => {
+        setDecisionToReview(decisionId);
+    };
+
+    const handleCloseReview = () => {
+        setDecisionToReview(null);
+        // 🚀 4. Recargar decisiones después de cerrar/aplicar/rechazar
         loadDecisions();
     };
 
@@ -78,7 +96,10 @@ export default function DecisionsManager() {
                 <div className="text-sm text-gray-500 dark:text-gray-400">{total} decision{total !== 1 ? "s" : ""}</div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900 rounded-lg space-y-3 max-h-[75vh]">
+            <div
+                ref={containerRef}
+                className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900 rounded-lg space-y-3 max-h-[75vh]"
+            >
                 {loading ? (
                     <div className="flex items-center justify-center h-full">
                         <span className="text-gray-600 dark:text-gray-400">Loading decisions...</span>
@@ -99,11 +120,19 @@ export default function DecisionsManager() {
                             key={decision.id}
                             decision={decision}
                             onUpdate={handleUpdateDecision}
+                            onReviewRules={handleReviewRules}
                         />
                     ))
                 )}
                 <div ref={chatEndRef}></div>
             </div>
+
+            {decisionToReview !== null && (
+                <RulesProposalsModal
+                    decisionId={decisionToReview}
+                    onClose={handleCloseReview}
+                />
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (

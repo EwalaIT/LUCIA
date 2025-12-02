@@ -38,3 +38,24 @@ export const toggleRule = async (id) => {
     const res = await api.post(`/rules/toggle`, { id })
     return res.data
 }
+
+/**
+ * Sends the user-approved list of rule proposals (from the draft) to the backend
+ * for final execution (database write).
+ * POST /decisions/apply_proposals
+ * body: { decision_id, accepted_proposals: Array<RuleProposal> }
+ * @param {number} decision_id - The ID of the decision being finalized.
+ * @param {Array<object>} accepted_proposals - The list of rule objects to execute.
+ */
+export const applyRuleProposals = async (decision_id, accepted_proposals) => {
+    try {
+        const res = await api.post("/decisions/apply_proposals", {
+            decision_id,
+            accepted_proposals,
+        })
+        return res.data // Esperamos { applied: true, message: "...", details: {...} }
+    } catch (error) {
+        console.error("Error applying rule proposals:", error)
+        throw error
+    }
+}

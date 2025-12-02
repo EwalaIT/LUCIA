@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import { Filter, Plus, AlertCircle, Clock, Calendar, CalendarDays } from "lucide-react"
+import { Filter, Plus, AlertCircle, Zap, Calendar, CalendarDays } from "lucide-react"
 import { getRules, createRule, updateRule, deleteRule, toggleRule } from "../services/rulesService"
 import RuleCard from "./RuleCard"
 import CreateRuleModal from "./CreateRuleModal"
@@ -21,7 +21,7 @@ export default function RulesManager() {
             key: "immediate",
             title: "Immediate Rules",
             subtitle: "Short-term actions executed instantly.",
-            icon: "clock",
+            icon: "zap",
             iconColor: "text-orange-600 hover:text-orange-800 transition",
         },
         {
@@ -282,7 +282,7 @@ export default function RulesManager() {
                                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                             >
                                 <div className={`flex items-center justify-center w-8 h-8 bg-gray-300 rounded-md`}>
-                                    {group.icon === "clock" && <Clock size={20} className={group.iconColor} />}
+                                    {group.icon === "zap" && <Zap size={20} className={group.iconColor} />}
                                     {group.icon === "date" && <Calendar size={20} className={group.iconColor} />}
                                     {group.icon === "calendar" && <CalendarDays size={20} className={group.iconColor}/>}
                                 </div>
