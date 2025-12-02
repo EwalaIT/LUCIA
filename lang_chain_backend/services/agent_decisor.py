@@ -11,10 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 # Tools (HA, VLM, Safety)
 from services.ha_tools import (
-    get_current_state_tool,
-    call_service_tool,
     safety_check_tool,
-    vlm_fetch_tool,
 )
 
 # DB tool (insert decision)
@@ -54,8 +51,9 @@ def _build_prompt(rules_context: str, current_time: str) -> str:
         ### DECISION HIERARCHY (Order of Precedence)
         1. **SAFETY:** Never execute an action that endangers equipment or humans.
         2. **SHORT-TERM RULES:** Immediate overrides provided in the context above.
-        3. **SCHEDULES/MID-TERM RULES:** Standard operating windows.
-        4. **GENERAL EFFICIENCY:** If no rule forbids it, optimize for lowest energy use.
+        3. **SCHEDULES/MID-TERM RULES:** Standard operating windows (including `temp_min`/`temp_max`).
+        4. **OCCUPANCY:** High priority to shut down energy consumers (switches, lights, setting climate to lower setback temperature) in zones inferred to be unoccupied.
+        5. **GENERAL EFFICIENCY:** If no rule forbids it, optimize for lowest energy use.
 
         ### TOOLS & PROTOCOL
         You have access to the **Decision Safety Check Tool**.
@@ -88,14 +86,8 @@ def create_decisor_agent(llm: BaseLanguageModel):
     Crea y devuelve un agente decisor basado en LangChain v1.x.
     Usa el método canónico create_agent, que devuelve un Runnable.
     """
-    system_prompt = ("You are the Lead Energy Efficiency & Control Orchestrator for an Intelligent Building. "
-        "You analyze rules, sensor values, and contexts to propose actions "
-        "that optimize heating, cooling, lighting and energy efficiency.")
 
     tools = [
-        # get_current_state_tool,
-        # call_service_tool,
-        # vlm_fetch_tool,
         safety_check_tool,
     ]
 
