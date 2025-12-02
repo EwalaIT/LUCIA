@@ -153,10 +153,10 @@ class Orchestrator:
             logger.debug("📤 Decision enqueued for execution: %s", decision_id)
 
             # 5️⃣ Enqueue para evaluación
-            eval_q = getattr(self.app.state, "eval_queue", None)
-            if eval_q:
-                await eval_q.put({"decision_id": decision_id, "prompt_name": f"auto_eval_{decision_id}"})
-                logger.debug("📝 Decision enqueued for evaluation: %s", decision_id)
+            # eval_q = getattr(self.app.state, "eval_queue", None)
+            # if eval_q:
+            #     await eval_q.put({"decision_id": decision_id, "prompt_name": f"auto_eval_{decision_id}"})
+            #     logger.debug("📝 Decision enqueued for evaluation: %s", decision_id)
 
             # 6️⃣ Guardar en memoria histórica
             try:
