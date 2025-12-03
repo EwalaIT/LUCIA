@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Check, X, FileEdit } from "lucide-react";
 import DecisionFeedback from "./DecisionFeedback";
 
-export default function DecisionBubble({ decision, onUpdate }) {
+export default function DecisionBubble({ decision, onUpdate, onReviewRules }) {
     const [showFeedback, setShowFeedback] = useState(null);
     const [position, setPosition] = useState({ top: 0, left: 0 });
     const correctBtnRef = useRef(null);

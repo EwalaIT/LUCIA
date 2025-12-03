@@ -74,13 +74,13 @@ def get_formatted_rules_context() -> str:
     return "\n".join(lines)
 
 
-def create_new_rule(rule_text: str, priority: str, expires_at: Optional[str] = None) -> int:
+def create_new_rule(rule_text: str, priority: str,expires_at: Optional[str] = None, origin_decision_id: Optional[int] = None, created_by: Optional[str] = "evaluator") -> int:
     """Crea una nueva regla en la DB y devuelve el ID."""
     conn = _get_conn()
     cur = conn.cursor()
     cur.execute(
-        "INSERT INTO rules (rule_text, priority, expires_at, created_at, active) VALUES (?, ?, ?, ?, 1)",
-        (rule_text, priority, expires_at, datetime.utcnow().isoformat())
+        "INSERT INTO rules (rule_text, priority, expires_at, origin_decision_id, created_by, created_at, active) VALUES (?, ?, ?, ?, ?, ?, 1)",
+        (rule_text, priority, expires_at, origin_decision_id, created_by, datetime.utcnow().isoformat())
     )
     conn.commit()
     conn.close()

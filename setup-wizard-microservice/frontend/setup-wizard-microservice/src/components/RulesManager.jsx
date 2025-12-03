@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { Filter, Plus, AlertCircle, Zap, Calendar, CalendarDays } from "lucide-react"
 import { getRules, createRule, updateRule, deleteRule, toggleRule } from "../services/rulesService"
+import BackButton from "./ui/BackButton"
 import RuleCard from "./RuleCard"
 import CreateRuleModal from "./CreateRuleModal"
 
@@ -160,6 +161,8 @@ export default function RulesManager() {
 
     return (
         <div className="max-w-6xl mx-auto py-6 px-4">
+            <BackButton label="Back to Dashboard" />
+
             {/* Header */}
             <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
