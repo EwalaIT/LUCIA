@@ -52,10 +52,15 @@ export const applyRuleProposals = async (decision_id, accepted_proposals) => {
         const res = await api.post("/decisions/apply_proposals", {
             decision_id,
             accepted_proposals,
-        })
-        return res.data // Esperamos { applied: true, message: "...", details: {...} }
+        });
+        return res.data;
     } catch (error) {
-        console.error("Error applying rule proposals:", error)
-        throw error
+        const message =
+            error?.response?.data?.error ||
+            error?.response?.data?.message ||
+            error?.message ||
+            "Failed to apply proposals";
+        console.error("applyRuleProposals:", message);
+        throw new Error(message);
     }
-}
+};

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route } from "react-router-dom"
+import BackButton from "./components/ui/BackButton"
 import SetupWizard from "./components/SetupWizard"
 import DecisionsManager from "./components/DecisionsManager"
 import RulesManager from "./components/RulesManager"
@@ -14,6 +15,7 @@ export default function App() {
               path="/"
               element={
                 <div className="w-full max-w-4xl mx-auto">
+                  <BackButton label="Back to Dashboard" />
                   <h1 className="text-3xl font-semibold text-gray-800 mb-6">
                     LUCIA Setup Wizard
                   </h1>

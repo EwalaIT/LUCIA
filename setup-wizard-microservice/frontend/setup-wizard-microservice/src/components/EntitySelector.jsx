@@ -18,7 +18,7 @@ const resolveState = (entities, selectedSet) => {
 };
 
 /* ---------------------------------------------------------
-   MAIN COMPONENT — NOW USING AREAS (NOT ZONES)
+   MAIN COMPONENT
 --------------------------------------------------------- */
 export default function EntitySelectorTree({ data, selected, setSelected }) {
   const [expandedAreas, setExpandedAreas] = useState({});
@@ -159,6 +159,28 @@ export default function EntitySelectorTree({ data, selected, setSelected }) {
                       </div>
                     );
                   })}
+
+                  {expandedAreas[area.id] && area.entities_without_device?.length > 0 && (
+                    <div className="pl-6 py-2 space-y-1 border-t border-gray-200 dark:border-gray-700">
+                      <div className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                        Entities without device
+                      </div>
+                      {area.entities_without_device.map((entity) => (
+                        <div
+                          key={entity.id}
+                          className="flex items-center gap-3 px-3 py-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+                        >
+                          <CheckboxEntity
+                            checked={selected.has(entity.id)}
+                            onChange={() => toggleEntity(entity.id)}
+                          />
+                          <span className="text-gray-600 dark:text-gray-300">
+                            {entity.friendly_name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

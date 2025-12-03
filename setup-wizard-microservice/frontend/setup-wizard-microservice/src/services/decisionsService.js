@@ -51,11 +51,37 @@ export const getRuleProposals = async (decision_id) => {
     try {
         const res = await axios.post(`${API_BASE}/decisions/proposals`, {
             decision_id,
-        })
-        // Devuelve { decision_id, status, is_ready, rule_proposals_json, rule_cot }
-        return res.data
+        });
+
+        const data = res.data || {};
+
+        // Normalizar rule_proposals_json: puede venir como string JSON o ya objeto/array
+        let proposals = data.rule_proposals_json ?? null;
+        if (typeof proposals === "string" && proposals.length > 0) {
+            try {
+                proposals = JSON.parse(proposals);
+            } catch (e) {
+                // Si no es JSON válido, log y dejarlo como string (se manejará en el componente)
+                console.warn("getRuleProposals: rule_proposals_json is not valid JSON", e);
+                proposals = null;
+            }
+        }
+
+        return {
+            ...data,
+            rule_proposals_json: proposals,
+        };
     } catch (error) {
-        console.error(`Error fetching rule proposals for ID ${decision_id}:`, error)
-        throw error
+        // Normalizar error para que el frontend lo pueda mostrar coherentemente
+        const message =
+            error?.response?.data?.error ||
+            error?.response?.data?.message ||
+            error?.message ||
+            "Unknown error";
+
+        console.error(`Error fetching rule proposals for ID ${decision_id}:`, message);
+
+        // Lanzar para que el componente catch lo reciba
+        throw new Error(message);
     }
-}
+};

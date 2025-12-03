@@ -97,6 +97,211 @@ def update_company():
 # ---------------------------------------------------------
 #               HOME ASSISTANT SUMMARY
 # ---------------------------------------------------------
+# @bp.route("/ha/summary", methods=["POST"])
+# def ha_summary():
+#     """
+#     Returns a complete HA summary:
+#     Zones -> Devices -> Entities
+
+#     - Uses HA registries (areas, devices, entities) as the source of truth
+#       for the hierarchy and relations.
+#     - Persists Device.ha_device_id as the canonical Home Assistant device_registry.id.
+#     - Uses /api/states only for dynamic data: state, friendly_name, unit, etc.
+#     """
+
+#     # -----------------------------------------------------
+#     # Parse and validate input
+#     # -----------------------------------------------------
+#     db = session()
+
+#     company = db.query(Company).first()
+#     if not company:
+#         return jsonify({"error": "No company defined"}), 400
+
+#     # ----- Try to get HA data -----
+#     try:
+#         areas = get_ha_areas()
+#         devices_reg = get_ha_devices()
+#         entities_reg = get_ha_entities()
+#         states = get_states()
+#     except Exception:
+#         return build_db_fallback(db)
+
+#     now = datetime.utcnow()
+
+#     # Lookup maps
+#     state_map = {s["entity_id"]: s for s in states}
+#     dev_reg_map = {d["id"]: d for d in devices_reg}
+#     ent_reg_map = {e["entity_id"]: e for e in entities_reg}
+
+#     db_devices = {d.ha_device_id: d for d in db.query(Device).all()}
+#     db_entities = {e.entity_id: e for e in db.query(Entity).all()}
+
+#     # ---------------------------------------------------------
+#     #  UPSERT DEVICES + ENTITIES
+#     # ---------------------------------------------------------
+#     for ent_reg in entities_reg:
+#         eid = ent_reg.get("entity_id")
+#         if not eid:
+#             continue
+
+#         ha_dev_id = ent_reg.get("device_id")
+#         state = state_map.get(eid)
+#         attrs = state.get("attributes", {}) if state else {}
+
+#         friendly = attrs.get("friendly_name") or ent_reg.get("name") or eid
+#         unit = attrs.get("unit_of_measurement") or ""
+#         last_state = state["state"] if state else None
+
+#         # ---- DEVICE ----
+#         dev = None
+#         if ha_dev_id:
+#             dev = db_devices.get(ha_dev_id)
+#             if not dev:
+#                 reg = dev_reg_map.get(ha_dev_id, {})
+#                 dev = Device(
+#                     ha_device_id=ha_dev_id,
+#                     name=reg.get("name") or ha_dev_id,
+#                     type=eid.split(".")[0],
+#                     last_sync=now
+#                 )
+#                 db.add(dev)
+#                 db.flush()
+#                 db_devices[ha_dev_id] = dev
+#             else:
+#                 dev.last_sync = now
+#                 db.add(dev)
+
+#         # ---- ENTITY ----
+#         ent = db_entities.get(eid)
+#         if not ent:
+#             ent = Entity(
+#                 device=dev,
+#                 entity_id=eid,
+#                 friendly_name=friendly,
+#                 unit=unit,
+#                 last_state=last_state,
+#                 last_updated=now
+#             )
+#             db.add(ent)
+#             db_entities[eid] = ent
+#         else:
+#             ent.device = dev
+#             ent.friendly_name = friendly
+#             ent.unit = unit or ent.unit
+#             ent.last_state = last_state
+#             ent.last_updated = now
+#             db.add(ent)
+
+#     db.commit()
+
+#     # ---------------------------------------------------------
+#     #  BUILD devices_map + ENTITIES OUT
+#     # ---------------------------------------------------------
+#     devices_map = {}
+#     entities_out = []
+
+#     for e in db.query(Entity).all():
+#         dev = e.device
+#         ha_dev_id = dev.ha_device_id if dev else None
+#         reg_ent = ent_reg_map.get(e.entity_id, {})
+#         reg_dev = dev_reg_map.get(ha_dev_id, {}) if ha_dev_id else {}
+
+#         area_id = reg_ent.get("area_id") or reg_dev.get("area_id")
+
+#         if dev:
+#             devices_map.setdefault(dev.id, {
+#                 "id": dev.id,
+#                 "name": dev.name,
+#                 "ha_device_id": ha_dev_id,
+#                 "type": dev.type,
+#                 "area_id": area_id,
+#                 "entities": []
+#             })
+
+#         payload = {
+#             "id": e.id,
+#             "entity_id": e.entity_id,
+#             "friendly_name": e.friendly_name,
+#             "unit": e.unit,
+#             "selected": bool(e.selected),
+#             "device_id": e.device_id
+#         }
+#         entities_out.append(payload)
+
+#         if dev:
+#             devices_map[dev.id]["entities"].append(payload)
+#         else:
+#             # ENTIDAD SIN DEVICE → colgar de la zona correspondiente
+#             if area_id and area_id in area_to_db_id:
+#                 zid = area_to_db_id[area_id]
+#                 zone = next(z for z in zones_final if z["id"] == zid)
+#                 if "entities_without_device" not in zone:
+#                     zone["entities_without_device"] = []
+#                 zone["entities_without_device"].append(payload)
+
+#     # ---------------------------------------------------------
+#     #  BUILD + UPSERT ZONES
+#     # ---------------------------------------------------------
+#     zones_final = []
+#     area_to_db_id = {}
+#     existing_zones = {z.area_id: z for z in db.query(Zone).filter(Zone.company_id == company.id)}
+
+#     for i, a in enumerate(areas, start=1):
+#         area_id = a.get("area_id")
+#         if not area_id:
+#             continue
+
+#         area_id = str(area_id).strip()
+
+#         if area_id in existing_zones:
+#             zone = existing_zones[area_id]
+#         else:
+#             zone = Zone(
+#                 company_id=company.id,
+#                 area_id=area_id,
+#                 name=a.get("name") or area_id,
+#                 description=a.get("description")
+#             )
+#             db.add(zone)
+#             db.flush()
+#             existing_zones[area_id] = zone
+
+#         area_to_db_id[area_id] = zone.id
+
+#         zones_final.append({
+#             "id": zone.id,
+#             "area_id": area_id,
+#             "name": zone.name,
+#             "description": zone.description,
+#             "devices": [],
+#             "entities_without_device": []
+#         })
+
+#     # -------------------------------
+#     # Attach devices to zones
+#     # -------------------------------
+#     for d in devices_map.values():
+#         area = d["area_id"]
+#         dev = db.query(Device).filter(Device.id == d["id"]).first()
+
+#         if area and area in area_to_db_id:
+#             zid = area_to_db_id[area]
+#             dev.zone_id = zid
+#             for z in zones_final:
+#                 if z["id"] == zid:
+#                     z["devices"].append(d)
+#         else:
+#             dev.zone_id = None
+
+#     db.commit()
+#     db.close()
+
+#     return jsonify({
+#         "zones": zones_final,
+#         "devices": list(devices_map.values()),
+#         "entities": entities_out
+#     })
 @bp.route("/ha/summary", methods=["POST"])
 def ha_summary():
     """
@@ -108,10 +313,6 @@ def ha_summary():
     - Persists Device.ha_device_id as the canonical Home Assistant device_registry.id.
     - Uses /api/states only for dynamic data: state, friendly_name, unit, etc.
     """
-
-    # -----------------------------------------------------
-    # Parse and validate input
-    # -----------------------------------------------------
     db = session()
 
     company = db.query(Company).first()
@@ -196,6 +397,43 @@ def ha_summary():
     db.commit()
 
     # ---------------------------------------------------------
+    #  BUILD + UPSERT ZONES
+    # ---------------------------------------------------------
+    zones_final = []
+    area_to_db_id = {}
+    existing_zones = {z.area_id: z for z in db.query(Zone).filter(Zone.company_id == company.id)}
+
+    for a in areas:
+        area_id = a.get("area_id")
+        if not area_id:
+            continue
+        area_id = str(area_id).strip()
+
+        if area_id in existing_zones:
+            zone = existing_zones[area_id]
+        else:
+            zone = Zone(
+                company_id=company.id,
+                area_id=area_id,
+                name=a.get("name") or area_id,
+                description=a.get("description")
+            )
+            db.add(zone)
+            db.flush()
+            existing_zones[area_id] = zone
+
+        area_to_db_id[area_id] = zone.id
+
+        zones_final.append({
+            "id": zone.id,
+            "area_id": area_id,
+            "name": zone.name,
+            "description": zone.description,
+            "devices": [],
+            "entities_without_device": []
+        })
+
+    # ---------------------------------------------------------
     #  BUILD devices_map + ENTITIES OUT
     # ---------------------------------------------------------
     devices_map = {}
@@ -231,57 +469,24 @@ def ha_summary():
 
         if dev:
             devices_map[dev.id]["entities"].append(payload)
-
-    # ---------------------------------------------------------
-    #  BUILD + UPSERT ZONES
-    # ---------------------------------------------------------
-    zones_final = []
-    area_to_db_id = {}
-    existing_zones = {z.area_id: z for z in db.query(Zone).filter(Zone.company_id == company.id)}
-
-    for i, a in enumerate(areas, start=1):
-        area_id = a.get("area_id")
-        if not area_id:
-            continue
-
-        area_id = str(area_id).strip()
-
-        if area_id in existing_zones:
-            zone = existing_zones[area_id]
         else:
-            zone = Zone(
-                company_id=company.id,
-                area_id=area_id,
-                name=a.get("name") or area_id,
-                description=a.get("description")
-            )
-            db.add(zone)
-            db.flush()
-            existing_zones[area_id] = zone
+            # ENTIDAD SIN DEVICE → colgar de la zona correspondiente
+            if area_id and area_id in area_to_db_id:
+                zid = area_to_db_id[area_id]
+                zone = next(z for z in zones_final if z["id"] == zid)
+                zone["entities_without_device"].append(payload)
 
-        area_to_db_id[area_id] = zone.id
-
-        zones_final.append({
-            "id": zone.id,
-            "area_id": area_id,
-            "name": zone.name,
-            "description": zone.description,
-            "devices": []
-        })
-
-    # -------------------------------
+    # ---------------------------------------------------------
     # Attach devices to zones
-    # -------------------------------
+    # ---------------------------------------------------------
     for d in devices_map.values():
         area = d["area_id"]
         dev = db.query(Device).filter(Device.id == d["id"]).first()
-
         if area and area in area_to_db_id:
             zid = area_to_db_id[area]
             dev.zone_id = zid
-            for z in zones_final:
-                if z["id"] == zid:
-                    z["devices"].append(d)
+            zone = next(z for z in zones_final if z["id"] == zid)
+            zone["devices"].append(d)
         else:
             dev.zone_id = None
 
