@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Check, X } from "lucide-react";
+import { Check, X, FileEdit } from "lucide-react";
 import DecisionFeedback from "./DecisionFeedback";
 
-export default function DecisionBubble({ decision, onUpdate }) {
+export default function DecisionBubble({ decision, onUpdate, onReviewRules }) {
     const [showFeedback, setShowFeedback] = useState(null);
     const [position, setPosition] = useState({ top: 0, left: 0 });
     const correctBtnRef = useRef(null);
@@ -44,7 +44,9 @@ export default function DecisionBubble({ decision, onUpdate }) {
         FAILED: "bg-red-500 text-white",
         EXECUTED: "bg-green-500 text-white",
         PENDING: "bg-yellow-300 text-gray-900",
-        REJECTED: "bg-gray-500 text-white"
+        REJECTED: "bg-gray-500 text-white",
+        RULES_READY: "bg-blue-500 text-white",
+        IN_PROGRESS: "bg-orange-400 text-gray-900"
     };
 
     useEffect(() => {
@@ -98,21 +100,36 @@ export default function DecisionBubble({ decision, onUpdate }) {
 
                 {/* Botones feedback */}
                 <div className="flex justify-end gap-2 mt-3">
-                    <button
-                        ref={correctBtnRef}
-                        onClick={handleCorrect}
-                        className="w-8 h-8 flex items-center justify-center rounded-md bg-green-500 hover:bg-green-600 text-white shadow"
-                    >
-                        <Check size={18} />
-                    </button>
+                    {decision.rule_status === "RULES_READY" || decision.rule_status === "IN_PROGRESS" ? (
+                        <button
+                            onClick={() => onReviewRules(decision.id)}
+                            className="px-3 py-1 text-xs font-semibold rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow flex items-center gap-1"
+                        >
+                            <FileEdit size={16} />
+                            {decision.rule_status === "IN_PROGRESS" ? "Rules Generating..." : "Review Rules"}
+                        </button>
+                    ) : (
+                        // Botones de Feedback normal (solo si no se ha enviado feedback o si no hay reglas listas)
+                        <>
+                            <button
+                                ref={correctBtnRef}
+                                onClick={handleCorrect}
+                                disabled={decision.notes !== null} // Deshabilitar si ya se dio feedback
+                                className="w-8 h-8 flex items-center justify-center rounded-md bg-green-500 hover:bg-green-600 text-white shadow disabled:bg-gray-400"
+                            >
+                                <Check size={18} />
+                            </button>
 
-                    <button
-                        ref={incorrectBtnRef}
-                        onClick={handleIncorrect}
-                        className="w-8 h-8 flex items-center justify-center rounded-md bg-red-500 hover:bg-red-600 text-white shadow"
-                    >
-                        <X size={18} />
-                    </button>
+                            <button
+                                ref={incorrectBtnRef}
+                                onClick={handleIncorrect}
+                                disabled={decision.notes !== null} // Deshabilitar si ya se dio feedback
+                                className="w-8 h-8 flex items-center justify-center rounded-md bg-red-500 hover:bg-red-600 text-white shadow disabled:bg-gray-400"
+                            >
+                                <X size={18} />
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 {/* Tooltip Feedback */}

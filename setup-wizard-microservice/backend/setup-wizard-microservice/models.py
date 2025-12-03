@@ -115,6 +115,9 @@ class Decision(Base):
     action_result = Column(Text)
     confidence = Column(Float)
     notes = Column(Text)
+    rule_proposals_json = Column(Text)
+    rule_cot = Column(Text)
+    rule_status = Column(Text)
     created_at = Column(Text, nullable=False, default=lambda: datetime.datetime.utcnow().isoformat())
 
 class Rule(Base):

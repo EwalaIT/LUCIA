@@ -13,20 +13,16 @@ from db.mcp_memory import init_db as mcp_init_db
 from config import settings
 
 # LLM wrappers
-from langchain_community.llms import Ollama
 from langchain_ollama import ChatOllama
 
 # Agents / workers
 from services.agent_decisor import create_decisor_agent
+from services.agent_evaluator import create_evaluator_agent
 from services.agent_db_query import create_db_query_agent
-from services.monitor_worker import start_monitoring_loop, stop_monitoring_loop
-from services.observations_consumer import start_observations_consumer, stop_observations_consumer
-from services.agent_evaluator import start_evaluator_loop, stop_evaluator_loop
-from services.agent_decisor_worker import start_decision_loop
 from services.orchestrator import Orchestrator
 
 # Routers
-from app.routers import agent_decisor, agent_db_query, execution, observations, websockets
+from app.routers import agent_decisor, agent_db_query, execution, agent_evaluator, observations, websockets
 
 # ---------------------------
 # Logging
@@ -109,11 +105,13 @@ async def startup_event():
     # 4) Create singleton agent executors (synchronous construction expected)
     try:
         decisor_agent = create_decisor_agent(llm=llm)
+        evaluator_agent = create_evaluator_agent(llm=llm)
         db_query_agent = create_db_query_agent(llm=llm, db_path=str(settings.db_path))
 
         app.state.agents = {
             "llm": llm,
             "decisor": decisor_agent,
+            "evaluator": evaluator_agent,
             "db_query": db_query_agent,
         }
         logger.info("✅ Singleton agents ready and stored in app.state.agents.")
@@ -136,38 +134,6 @@ async def startup_event():
         await async_client.aclose()
         raise
 
-    # 5) Start background workers (monitor, consumer, evaluator)
-    # try:
-    #     # monitor worker expects app and client
-    #     start_monitoring_loop(app, async_client)
-    #     logger.info("✅ Monitor worker started.")
-    # except Exception:
-    #     logger.exception("Error starting monitor worker; continuing startup (check logs).")
-
-    # try:
-    #     await start_observations_consumer(app)
-    #     logger.info("✅ Observations consumer started.")
-    # except Exception:
-    #     logger.exception("Error starting observations consumer; continuing startup (check logs).")
-        
-    # try:
-    #     # Si la función bloquea, la esperamos directamente
-    #     await start_decision_loop(app)
-    #     logger.info("✅ Decision loop started.")
-    # except asyncio.CancelledError:
-    #     # Caso especial: si el sistema cancela esta tarea, lo registramos y relanzamos
-    #     logger.warning("⚠️ Decision loop task was cancelled.")
-    #     raise
-    # except Exception as e:
-    #     # Cualquier otro error se registra pero no detiene el startup
-    #     logger.exception(f"❌ Error starting decision loop: {e}; continuing startup (check logs).")
-
-    # try:
-    #     asyncio.create_task(start_evaluator_loop(app))
-    #     logger.info("✅ Agent evaluator loop started.")
-    # except Exception:
-    #     logger.exception("Error starting agent evaluator loop; continuing startup (check logs).")
-
     logger.info("🚀 Startup complete.")
 
 
@@ -176,29 +142,7 @@ async def startup_event():
 # ---------------------------
 @app.on_event("shutdown")
 async def shutdown_event():
-    logger.info("🧹 Shutting down backend. Cleaning resources...")
-
-    # # 1) Stop monitor worker
-    # try:
-    #     await stop_monitoring_loop()
-    #     logger.info("✅ Monitor worker stopped.")
-    # except Exception:
-    #     logger.exception("Error while stopping monitor worker.")
-
-    # # 2) Stop observations consumer
-    # try:
-    #     await stop_observations_consumer()
-    #     logger.info("✅ Observations consumer stopped.")
-    # except Exception:
-    #     logger.exception("Error while stopping observations consumer.")
-
-    # # 3) Stop evaluator loop
-    # try:
-    #     await stop_evaluator_loop()
-    #     logger.info("✅ Agent evaluator loop stopped.")
-    # except Exception:
-    #     logger.exception("Error while stopping agent evaluator loop.")
-        
+    logger.info("🧹 Shutting down backend. Cleaning resources...")        
         
     orchestrator = getattr(app.state, "orchestrator", None)
     if orchestrator:
@@ -233,6 +177,7 @@ app.include_router(observations.router, prefix="/api", tags=["Observations"])
 app.include_router(agent_decisor.router, prefix="/agents/decisor", tags=["Decisor Agent"])
 app.include_router(agent_db_query.router, prefix="/agents/db", tags=["DB Query Agent"])
 app.include_router(execution.router, prefix="/api/decisions", tags=["Execution"])
+app.include_router(agent_evaluator.router, prefix="/api", tags=["Evaluator Agent"])
 app.include_router(websockets.router, tags=["WebSockets"])
 
 # ---------------------------

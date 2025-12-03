@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Calendar, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
-import { getDecisions, updateDecision } from "../services/decisionsService";
+import { Calendar, ChevronLeft, ChevronRight, ArrowUpDown, RefreshCw } from "lucide-react";
+import { getDecisions, updateDecision} from "../services/decisionsService";
+import BackButton from "./ui/BackButton"
 import DecisionBubble from "./DecisionBubble";
+import RulesProposalsModal from "./RulesProposalsModal";
 
 export default function DecisionsManager() {
     const [decisions, setDecisions] = useState([]);
@@ -12,7 +14,13 @@ export default function DecisionsManager() {
     const [perPage] = useState(5);
     const [sort, setSort] = useState("desc");
     const [total, setTotal] = useState(0);
+    const [decisionToReview, setDecisionToReview] = useState(null);
+
+    const [generatingRules, setGeneratingRules] = useState(false);
+    const [progress, setProgress] = useState(0);
+
     const chatEndRef = useRef(null);
+    const containerRef = useRef(null);
 
     useEffect(() => { loadDecisions() }, [selectedDate, page, sort]);
 
@@ -23,7 +31,13 @@ export default function DecisionsManager() {
             setDecisions(data.decisions);
             setTotal(data.total);
             setError(null);
-            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+            setTimeout(() => {
+            if (sort === "desc") {
+                containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+            } else {
+                
+                chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            };})
         } catch (err) {
             setError("Failed to load decisions");
         } finally {
@@ -33,6 +47,37 @@ export default function DecisionsManager() {
 
     const handleUpdateDecision = async (id, confidence, notes) => {
         await updateDecision(id, confidence, notes);
+
+        // Opcional: overlay breve de “procesando” antes de abrir el modal
+        setGeneratingRules(true);
+        setProgress(0);
+        const MIN_DISPLAY_TIME = 800;
+        const startTime = Date.now();
+
+        let progressInterval = setInterval(() => {
+            setProgress((prev) => Math.min(95, prev + Math.random() * 5));
+        }, 200);
+
+        // Abrimos modal inmediatamente
+        setDecisionToReview(id);
+
+        // Aseguramos que el overlay dure al menos MIN_DISPLAY_TIME
+        const elapsed = Date.now() - startTime;
+        setTimeout(() => {
+            clearInterval(progressInterval);
+            setProgress(100);
+            setGeneratingRules(false);
+            loadDecisions(); // refrescar lista
+        }, Math.max(MIN_DISPLAY_TIME - elapsed, 0));
+    };
+
+    const handleReviewRules = (decisionId) => {
+        setDecisionToReview(decisionId);
+    };
+
+    const handleCloseReview = () => {
+        setDecisionToReview(null);
+
         loadDecisions();
     };
 
@@ -42,19 +87,50 @@ export default function DecisionsManager() {
 
     return (
         <div className="max-w-4xl mx-auto py-6 px-4 flex flex-col h-[90vh]">
+            {/* Overlay generando reglas */}
+            {generatingRules && (
+                <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-50">
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl flex flex-col items-center gap-4 shadow-lg">
+                        <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">Generating Rules...</div>
+                        <div className="w-64 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-blue-600 dark:bg-blue-400 transition-all duration-500"
+                                style={{ width: `${progress}%` }}
+                            ></div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div className=" flex items-center justify-between">
+                <BackButton label="Back to Dashboard" />
+            </div>
             <div className="mb-4 flex items-center justify-between">
+                
                 <div>
                     <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">AI Agent Decisions</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         Review and provide feedback on energy efficiency decisions
                     </p>
                 </div>
-                <button
-                    onClick={toggleSort}
-                    className="flex items-center gap-1 px-3 py-1 border rounded-md text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                    <ArrowUpDown size={16} /> {sort === "desc" ? "Recent First" : "Oldest First"}
-                </button>
+                <div className="flex items-center gap-2">
+                    {/* Sort Button */}
+                    <button
+                        onClick={toggleSort}
+                        className="flex items-center gap-1 px-3 py-1 border rounded-md text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        title="Toggle sort order"
+                    >
+                        <ArrowUpDown size={16} /> {sort === "desc" ? "Recent First" : "Oldest First"}
+                    </button>
+
+                    {/* Refresh Button */}
+                    <button
+                        onClick={loadDecisions}
+                        className="flex items-center gap-1 px-3 py-1 border rounded-md text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        title="Refresh decisions"
+                    >
+                        <RefreshCw size={16} /> Refresh
+                    </button>
+                </div>
             </div>
 
             <div className="mb-4 flex items-center gap-3">
@@ -78,7 +154,10 @@ export default function DecisionsManager() {
                 <div className="text-sm text-gray-500 dark:text-gray-400">{total} decision{total !== 1 ? "s" : ""}</div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900 rounded-lg space-y-3 max-h-[75vh]">
+            <div
+                ref={containerRef}
+                className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900 rounded-lg space-y-3 max-h-[75vh]"
+            >
                 {loading ? (
                     <div className="flex items-center justify-center h-full">
                         <span className="text-gray-600 dark:text-gray-400">Loading decisions...</span>
@@ -99,11 +178,19 @@ export default function DecisionsManager() {
                             key={decision.id}
                             decision={decision}
                             onUpdate={handleUpdateDecision}
+                            onReviewRules={handleReviewRules}
                         />
                     ))
                 )}
                 <div ref={chatEndRef}></div>
             </div>
+
+            {decisionToReview !== null && (
+                <RulesProposalsModal
+                    decisionId={decisionToReview}
+                    onClose={handleCloseReview}
+                />
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (
