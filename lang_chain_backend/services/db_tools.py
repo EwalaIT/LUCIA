@@ -102,3 +102,46 @@ fetch_prompts_tool = StructuredTool.from_function(
     name="fetch_prompts",
     description="Retrieve active prompts from the DB and return them as JSON string.",
 )
+
+
+def _create_rule_tool_func(rule_text: str, priority: str, expires_at: Optional[str] = None) -> str:
+    return json.dumps({
+        "action_type": "CREATE",
+        "rule_text": rule_text,
+        "priority": priority,
+        "expires_at": expires_at
+    })
+
+create_rule_tool = StructuredTool.from_function(
+    func=_create_rule_tool_func,
+    name="propose_create_rule",
+    description="Propose creating a new system rule based on evaluation. Parameters: rule_text (str), priority (immediate/mid_term/long_term), expires_at (Optional[str, ISO format]). Returns a JSON object describing the creation proposal."
+)
+
+def _modify_rule_tool_func(rule_id: int, new_rule_text: str, new_priority: str, new_expires_at: Optional[str] = None) -> str:
+    return json.dumps({
+        "action_type": "MODIFY",
+        "rule_id": rule_id,
+        "rule_text": new_rule_text,
+        "priority": new_priority,
+        "expires_at": new_expires_at
+    })
+
+modify_rule_tool = StructuredTool.from_function(
+    func=_modify_rule_tool_func,
+    name="propose_modify_rule",
+    description="Propose modifying an existing system rule based on evaluation. Parameters: rule_id (int), new_rule_text (str), new_priority (str), new_expires_at (Optional[str, ISO format]). Returns a JSON object describing the modification proposal."
+)
+
+
+def _delete_rule_tool_func(rule_id: int) -> str:
+    return json.dumps({
+        "action_type": "DELETE",
+        "rule_id": rule_id
+    })
+    
+delete_rule_tool = StructuredTool.from_function(
+    func=_delete_rule_tool_func,
+    name="propose_delete_rule",
+    description="Propose deleting an existing system rule based on evaluation. Parameter: rule_id (int). Returns a JSON object describing the deletion proposal."
+)

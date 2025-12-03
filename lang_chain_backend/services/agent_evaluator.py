@@ -4,125 +4,238 @@ from __future__ import annotations
 import logging
 import json
 import asyncio
-from typing import Optional
-from config import settings
+import re
+from typing import Optional, Any, Dict
 
-from langchain_ollama import OllamaLLM
-from langchain_core.tools import StructuredTool
-from db.prompts import upsert_prompt
+from langchain_core.language_models import BaseLanguageModel
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage
 from db.decisions import get_decision_by_id
+from db.rules import get_active_rules
+from db.decisions import update_decision_with_proposals, update_decision_status, update_decision_rule_status
+from .db_tools import create_rule_tool, modify_rule_tool, delete_rule_tool
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def _build_evaluation_prompt(decision_pkg: dict) -> str:
+def _build_rule_generation_prompt(decision_pkg: dict, user_score: float, user_note: str) -> str:
     """
-    Builds the system instruction for the automated Decision Package Auditor.
-    This prompt instructs the LLM to analyze the DecisionPackage JSON for safety,
-    clarity, and potential improvements.
+    Builds the system instruction for the Rule Generation Agent.
+    Instructs the LLM to analyze the decision performance and propose rule changes.
     """
-    return (
-        "You are an automated Decision Package Auditor and Safety Guardrail. Your task is to perform a critical evaluation of the following proposed action plan.\n\n"
-        "**Decision Package (JSON to Audit):**\n"
-        f"{json.dumps(decision_pkg, indent=2, ensure_ascii=False)}\n\n"
-        "**Evaluation Requirements:**\n"
-        "Analyze the package based on the Chain of Thought and Suggested Actions. Provide a concise, professional audit summary using bullet points, covering all three mandatory criteria below:\n"
-        " - **Safety Assessment:** Comment on potential risks or unintended consequences for devices/users. (e.g., 'Safe, as it only adjusts non-critical fan speed.')\n"
-        " - **Clarity & Completeness:** Rate the clarity of the Chain of Thought and the completeness of the Suggested Actions (target_entity, parameters, rationale). (e.g., 'Clarity is good, but the 'parameters' field is missing the required fan mode.)\n"
-        " - **Suggested Improvements:** Propose one or two specific, actionable improvements for better energy efficiency or logic optimization. (e.g., 'Improvement: Add a condition to check for user presence before turning off the light.')\n\n"
-        "Return ONLY the audit summary (bullet points)."
-    )
+    active_rules = get_active_rules()
+    
+    # Formateo mejorado de reglas para incluir EXPIRATION, que es clave en la jerarquía
+    rules_text = "\n".join([
+        f"Rule ID {r['id']} | Priority: {r['priority']} | Expires: {r.get('expires_at', 'NEVER')} | Rule: {r['rule_text']}" 
+        for r in active_rules
+    ])
+    
+    decision_pkg_json = json.dumps(decision_pkg, indent=2, ensure_ascii=False)
+    
+    prompt = f"""
+        ### SYSTEM ROLE: RULE OPTIMIZATION ENGINE
 
+        You are the **System Rule Improvement Agent**. Your core mission is **Efficiency and Optimization**. You must analyze the decision failure and user feedback to propose precise, non-contradictory rule changes that ensure the system operates with **maximum energy efficiency and minimum user discomfort**.
 
-def _extract_llm_text(resp) -> str:
+        **STRATEGIC CONTEXT:**
+        The rules you manage have a direct impact on energy consumption (e.g., HVAC, lighting). Your primary goal is to **reduce energy consumption without compromising comfort or safety**. For example, if the user states, "there IS occupancy," and heating was shut off, the error is severe and requires immediate, high-priority rule correction.
+
+        ### NON-NEGOTIABLE OUTPUT REQUIREMENT
+
+        1. **MUST RETURN RAW JSON:** Your FINAL and ONLY output **MUST BE** one RAW JSON object. NO Markdown, NO conversational text, NO preceding or trailing characters.
+        2. **MANDATORY TOOL USE:** You **MUST** use the provided tools (`propose_create_rule`, `propose_modify_rule`, `propose_delete_rule`) if a corrective action is required.
+        3. **NO INTERMEDIATE OUTPUT:** Your final response must NOT be an intermediate tool invocation. It must be the **FINAL CONSOLIDATED JSON** containing the *results* of the tool calls.
+
+        ### MANDATORY OUTPUT FORMAT (EXACT JSON SCHEMA)
+
+        You must return exactly this JSON structure. Note the double curly braces for escaping the JSON within the f-string:
+
+        {{
+        "chain_of_thought": "REQUIRED: A single concise paragraph. Include the root cause diagnosis, rule ID references, and justification for the proposed priority/action, emphasizing how the change improves **Energy Efficiency** or **Reduces User Discomfort**.",
+        "rule_proposals": [
+            // Each item MUST be an object returned as the result of a tool invocation.
+            // If no action is needed, this array MUST be empty: []
+        ]
+        }}
+
+        ### OPERATIONAL CONTEXT (INPUTS)
+        - Decision ID: {decision_pkg.get('id', 'N/A')}
+        - Decision Package (JSON): 
+        {decision_pkg_json}
+        - User Confidence Score: {user_score:.2f} (0.0 = Bad, 1.0 = Perfect)
+        - User Note: "{user_note}"
+
+        ### ACTIVE RULES & HIERARCHY
+        - **Current Rules:** Analyze Rule ID, Priority, and Expires fields:
+        {rules_text}
+        - **Hierarchy (Highest to Lowest):** IMMEDIATE > MID_TERM > LONG_TERM.
+        - **Editing Rule:** Prefer MODIFY over CREATE for minor adjustments; cite Rule ID. New overriding rules MUST use a strictly higher priority.
+ 
+        ### REQUIRED WORKFLOW (ENGINEERING REASONING)
+        1. **DIAGNOSE & CoT (Deep Analysis):** Determine the root cause (missing rule, wrong priority, conflict, etc.). Your analysis **MUST** link the failure to the **energy goal** (e.g., "The system incorrectly assumed vacancy, leading to unnecessary energy savings at the expense of comfort, or, conversely, wasted energy by over-heating/cooling.").
+        2. **ACT (MANDATORY TOOL INVOCATION):** Invoke the necessary tool(s) for the correction:
+            - `propose_create_rule(rule_text, priority, expires_at)`
+            - `propose_modify_rule(rule_id, rule_text, priority, expires_at)`
+            - `propose_delete_rule(rule_id)`
+        3. **RETURN:** Output **ONLY** the RAW JSON object that matches the structure in the MANDATORY OUTPUT FORMAT block.
+
+        ---
+        **FINAL INSTRUCTION:** Execute the workflow precisely. Base your reasoning on energy optimization and user comfort. Return ONLY the final structured JSON output.
     """
-    OllamaLLM sometimes returns a dict with .content, sometimes raw text.
-    Normalize all possible formats.
+    return prompt
+
+def create_evaluator_agent(llm: BaseLanguageModel):
     """
+    Crea un agente evaluador exactamente igual que create_decisor_agent:
+    - LLM.bind_tools()
+    - Sin ReAct
+    - Sin AgentExecutor
+    - Devuelve un Runnable
+    """
+    tools=[create_rule_tool, modify_rule_tool, delete_rule_tool]
+
     try:
-        # Response type 1: BaseMessage
-        if hasattr(resp, "content"):
-            return resp.content
+        llm_with_tools = llm.bind_tools(tools)
+        logger.info("✅ Evaluator Agent (LLM + Tools) creado correctamente.")
+        return llm_with_tools
 
-        # Response type 2: dict from langchain
-        if isinstance(resp, dict):
-            if "content" in resp:
-                return resp["content"]
-            if "text" in resp:
-                return resp["text"]
-            return json.dumps(resp)
-
-        # Response type 3: plain string
-        return str(resp)
-
-    except Exception:
-        return str(resp)
-
-
-def evaluate_and_update_prompt( prompt_name: str,
-    decision_id: Optional[int] = None,
-    text_override: Optional[str] = None
-) -> dict:
-    """
-    Synchronous convenience function: load decision, call LLM to evaluate,
-    and optionally upsert a prompt template with the evaluation.
-    """
-    if text_override:
-        dp = {"manual_input": text_override}
-
-    elif decision_id is not None:
-        row = get_decision_by_id(decision_id)
-        if not row:
-            raise ValueError("Decision not found")
-
-        dp_json = row.get("decision_package_json")
-        try:
-            dp = json.loads(dp_json)
-        except Exception:
-            dp = {"raw": dp_json}
-    else:
-        raise ValueError("Either decision_id or text_override must be provided")
-
-    # 2) Construir prompt
-    prompt = _build_evaluation_prompt(dp)
-
-    # 3) Llamada al modelo Ollama
-    llm = OllamaLLM(
-        base_url=str(settings.ollama_url),
-        model=settings.ollama_model,
-        timeout=25
-    )
-
-    try:
-        raw = llm.invoke(prompt)
-        text = _extract_llm_text(raw)
     except Exception as e:
-        logger.exception("Error calling LLM: %s", e)
+        logger.exception("❌ Error al crear el Evaluator Agent: %s", e)
         raise
 
-    # 4) Guardar resultado en DB si se indicó nombre
-    if prompt_name:
-        upsert_prompt(prompt_name, text)
 
+async def run_evaluator(app, decision_id: int, user_score: int, user_note: str):
+    """
+    Carga la decisión y el feedback, llama al LLM para generar propuestas de reglas 
+    usando las herramientas, y devuelve las propuestas.
+    """
+    
+    llm_with_tools = getattr(app.state, "agents", {}).get("evaluator")
+    
+    if llm_with_tools is None:
+        raise RuntimeError("Evaluator Agent is not initialized.")
+    
+    row = get_decision_by_id(decision_id)
+    if not row:
+        raise ValueError("Decision not found")
+        
+    dp_json = row.get("decision_package_json")
+    try:
+        decision_pkg = json.loads(dp_json)
+    except Exception:
+        decision_pkg = {"raw": dp_json}
+    
+    # 1) Construir el prompt de reglas
+    system_instruction = _build_rule_generation_prompt(decision_pkg, user_score, user_note)
+    
+    input_text = "Analyze the context and generate rule proposals following the instructions and MANDATORY OUTPUT FORMAT."
+    
+    prompt_template = ChatPromptTemplate.from_messages([
+        SystemMessage(content=system_instruction),
+        HumanMessage(content=input_text),
+    ])
+    
+    agent_chain = prompt_template | llm_with_tools
+    
+    try:
+        # 2) Invoke LLM
+        raw_output = await asyncio.to_thread(
+            lambda: agent_chain.invoke({"input": input_text})
+        )
+        
+        llm_response_text = raw_output.content
+        logger.info("Respuesta cruda del Agente:\n%s", llm_response_text)
+        
+        # 3) Extract JSON Robustly (The fix for the issue)
+        response_json = _extract_json_from_text(llm_response_text)
+        
+        chain_of_thought = response_json.get("chain_of_thought", "No COT provided.")
+        proposals = response_json.get("rule_proposals", [])
+
+        return {
+            "chain_of_thought": chain_of_thought,
+            "rule_proposals": proposals
+        }
+        
+    except Exception as e:
+        logger.exception("Error calling LLM for rule generation: %s", e)
+        return {
+            "chain_of_thought": f"ERROR: Falló la generación de reglas: {e}",
+            "rule_proposals": []
+        }
+
+
+def _extract_json_from_text(text: str) -> Dict[str, Any]:
+    """
+    Attempts to extract the required final JSON structure, handling raw JSON, 
+    markdown wrappers, or intermediate function call output from the LLM.
+    """
+    
+    # Clean the text of markdown wrappers first for robustness
+    clean_text = re.sub(r'```json\s*|```', '', text, flags=re.DOTALL).strip()
+    
+    # A. Search for the FINAL JSON structure (Priority 1)
+    # Tries to find the main structure: {"chain_of_thought": ... "rule_proposals": ...}
+    final_json_match = re.search(r'\{\s*"chain_of_thought".*\}', clean_text, re.DOTALL)
+
+    if final_json_match:
+        try:
+            final_json_str = final_json_match.group(0)
+            result = json.loads(final_json_str)
+            if "chain_of_thought" in result and "rule_proposals" in result:
+                return result
+        except json.JSONDecodeError:
+            pass
+
+    # B. Search for an INTERMEDIATE TOOL CALL (Priority 2 - Fallback)
+    # Looks for a single tool call object: {"name": "propose_...", "parameters": ...}
+    # This handles the case where the LLM stops at the tool call step.
+    tool_call_match = re.search(r'\{\s*"name"\s*:\s*"(propose_(create|modify|delete)_rule)"', clean_text)
+    
+    if tool_call_match:
+        try:
+            # Find start of JSON object
+            start_idx = tool_call_match.start()
+            potential_json = clean_text[start_idx:]
+            
+            # Simple heuristic: find matching brace (not perfect but robust enough for structured tool output)
+            depth = 0
+            end_idx = -1
+            for i, char in enumerate(potential_json):
+                if char == '{': depth += 1
+                elif char == '}': depth -= 1
+                if depth == 0:
+                    end_idx = i + 1
+                    break
+            
+            if end_idx != -1:
+                tool_call_str = potential_json[:end_idx]
+                tool_call_obj = json.loads(tool_call_str)
+                
+                # Transform Tool Call format (LangChain/Ollama specific) to our internal Rule Proposal format
+                # The tool call usually has "parameters": { ... } which contains our rule fields
+                proposal = tool_call_obj.get("parameters", {})
+                # We add the action_type based on the tool name if missing
+                tool_name = tool_call_obj.get("name", "")
+                
+                if "create" in tool_name: proposal["action_type"] = "CREATE"
+                elif "modify" in tool_name: proposal["action_type"] = "MODIFY"
+                elif "delete" in tool_name: proposal["action_type"] = "DELETE"
+
+                return {
+                    "chain_of_thought": "WARNING: LLM returned intermediate tool call only. CoT inferred from tool execution.",
+                    "rule_proposals": [proposal]
+                }
+        except Exception as e:
+            logger.warning("Failed to parse intermediate tool call: %s", e)
+
+    # C. Default Fallback Error
     return {
-        "prompt_name": prompt_name,
-        "decision_id": decision_id,
-        "evaluation": text
+        "chain_of_thought": f"ERROR: Failed to extract final or intermediate JSON structure. Raw output starts with: {text[:200]}...",
+        "rule_proposals": []
     }
-
-
-# StructuredTool for LangChain usage
-def _update_prompt_tool_func(prompt_name: str, content: str) -> str:
-    pid = upsert_prompt(prompt_name, content)
-    return f"Prompt updated (id={pid})"
-
-
-update_prompt_tool = StructuredTool.from_function(
-    func=_update_prompt_tool_func,
-    name="update_prompt_template",
-    description="Upserts a prompt template into the prompt_templates table."
-)
 
 # -------------------------
 # Worker asíncrono para evaluación en background
@@ -132,26 +245,59 @@ _evaluator_task: Optional[asyncio.Task] = None
 
 async def _evaluator_loop(app) -> None:
     """
-    Bucle principal del worker que procesa la cola de decisiones para evaluar prompts.
+    Bucle principal del worker que procesa la cola de decisiones
+    para generar propuestas de reglas.
     """
     queue: asyncio.Queue = app.state.eval_queue
-    logger.info("Evaluator loop started.")
-
+    logger.info("Rule Generation Evaluator loop started.")
+    
     try:
         while True:
             decision_item = await queue.get()
-            try:
-                result = await asyncio.to_thread(
-                    evaluate_and_update_prompt,
-                    decision_item.get("prompt_name"),
-                    decision_item.get("decision_id"),
-                    decision_item.get("text")
-                )
-                logger.info("Evaluator processed item: %s", result)
-            except Exception as e:
-                logger.exception("Error processing evaluation item: %s", e)
-            finally:
-                queue.task_done()
+            
+            # Si tiene score y note, es el feedback del usuario
+            if "user_score" in decision_item and "user_note" in decision_item:
+                decision_id = decision_item["decision_id"]
+                try:
+                    update_decision_rule_status(decision_id, rule_status="IN_PROGRESS")
+                    # NOTA: Llamar a la función que genera las reglas
+                    proposals = await run_evaluator(
+                        app,
+                        decision_id=decision_id,
+                        user_score=decision_item["user_score"],
+                        user_note=decision_item["user_note"]
+                    )
+                    
+                    chain_of_thought = proposals.get("chain_of_thought", "")
+                    rule_proposals_list = proposals.get("rule_proposals", [])
+                    
+                    if not rule_proposals_list and "ERROR:" in chain_of_thought:
+                        # Fallo capturado dentro de run_evaluator
+                        raise RuntimeError(f"Rule generation failed. CoT: {chain_of_thought}")
+                    
+                    rule_proposals_json_str = json.dumps(rule_proposals_list)
+                    
+
+                    update_decision_with_proposals(
+                        decision_id=decision_id,
+                        proposals_json=rule_proposals_json_str,
+                        chain_of_thought=chain_of_thought
+                    )
+                    
+                    update_decision_rule_status(decision_id, "RULES_READY")
+                    
+                    logger.info(
+                        f"✅ Stored proposals for Decision {decision_id}: {len(rule_proposals_list)} proposals."
+                    )
+                     
+                    logger.info("Rule proposals generated for Decision %s: %s", decision_item["decision_id"], proposals)
+
+                except Exception as e:
+                    logger.exception(f"❌ Critical Error processing user feedback for Decision {decision_id}: {e}")
+                    update_decision_rule_status(decision_id, "RULES_FAILED")
+            
+                finally:
+                    queue.task_done()
 
     except asyncio.CancelledError:
         logger.info("Evaluator loop cancelled.")
