@@ -40,7 +40,7 @@ def list_rules():
         query = query.filter(Rule.active == payload["active"])
 
     if "created_by" in payload and payload["created_by"]:
-        if payload["created_by"] not in ("user", "decisor", "evaluator"):
+        if payload["created_by"] not in ("user", "decisor", "evaluator", "chat"):
             return jsonify({"error": "Invalid created_by"}), 400
         query = query.filter(Rule.created_by == payload["created_by"])
 
