@@ -33,6 +33,7 @@ export default function RuleCard({ rule, onUpdate, onDelete, onToggle }) {
         user: "User",
         decisor: "Decisor Agent",
         evaluator: "Evaluator Agent",
+        chat: "Chat Commander",
     }
 
     const handleSave = () => {

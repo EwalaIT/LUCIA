@@ -28,7 +28,7 @@ class Orchestrator:
     - Construye contexto completo (snapshots + memoria histórica)
     - Ejecuta el decisor
     - Persiste y ejecuta decisiones
-    - Evalúa decisiones y actualiza prompts/rediseños
+    - Evalúa decisiones
     """
 
     def __init__(self, app: FastAPI, client):
@@ -151,12 +151,6 @@ class Orchestrator:
             # 4️⃣ Enqueue para ejecución
             await self.exec_queue.put({"decision_id": decision_id})
             logger.debug("📤 Decision enqueued for execution: %s", decision_id)
-
-            # 5️⃣ Enqueue para evaluación
-            # eval_q = getattr(self.app.state, "eval_queue", None)
-            # if eval_q:
-            #     await eval_q.put({"decision_id": decision_id, "prompt_name": f"auto_eval_{decision_id}"})
-            #     logger.debug("📝 Decision enqueued for evaluation: %s", decision_id)
 
             # 6️⃣ Guardar en memoria histórica
             try:

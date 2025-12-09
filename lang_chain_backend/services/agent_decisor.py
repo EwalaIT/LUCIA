@@ -142,7 +142,6 @@ async def run_decisor(app, ha_instance: str, context: dict, reason: str = "obser
 
     # Invoke the agent in thread to avoid blocking
     try:
-        # La cadena (prompt | llm_with_tools) espera un dict con la clave 'input'
         result = await asyncio.to_thread(lambda: agent_chain.invoke({"input": input_text}))
     except Exception as e:
         logger.exception("Error invoking decisor agent: %s", e)

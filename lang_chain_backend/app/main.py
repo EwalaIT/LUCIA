@@ -2,7 +2,7 @@
 import os
 import logging
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,10 +19,11 @@ from langchain_ollama import ChatOllama
 from services.agent_decisor import create_decisor_agent
 from services.agent_evaluator import create_evaluator_agent
 from services.agent_db_query import create_db_query_agent
+from services.agent_chat_commander import create_chat_commander_agent
 from services.orchestrator import Orchestrator
 
 # Routers
-from app.routers import agent_decisor, agent_db_query, execution, agent_evaluator, observations, websockets
+from app.routers import agent_decisor, agent_db_query, execution, agent_evaluator, observations, agent_chat, websockets
 
 # ---------------------------
 # Logging
@@ -64,6 +65,8 @@ async def startup_event():
     except Exception:
         logger.exception("❌ Database initialization (mcp_init_db) failed. Aborting startup.")
         raise
+    
+    app.state.db_path = str(settings.db_path)
 
     # 1) Shared Async HTTP client for workers / internal calls
     async_client = httpx.AsyncClient(timeout=15.0)
@@ -178,6 +181,7 @@ app.include_router(agent_decisor.router, prefix="/agents/decisor", tags=["Deciso
 app.include_router(agent_db_query.router, prefix="/agents/db", tags=["DB Query Agent"])
 app.include_router(execution.router, prefix="/api/decisions", tags=["Execution"])
 app.include_router(agent_evaluator.router, prefix="/api", tags=["Evaluator Agent"])
+app.include_router(agent_chat.router, prefix="/api", tags=["Chat Agent"])
 app.include_router(websockets.router, tags=["WebSockets"])
 
 # ---------------------------

@@ -8,7 +8,6 @@ Database access layer for the LangChain Agent backend.
 - Provides DB helpers for:
     * Observations persistence
     * Decision (HITL) lifecycle
-    * Prompts management
     * Contexts / memory entries
     * LangChain StructuredTools wrappers that call these sync functions
 """
@@ -22,7 +21,6 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
 from db.decisions import persist_new_decision
-from db.prompts import get_active_prompts
 
 from config import settings
 
@@ -34,7 +32,6 @@ logger.setLevel(settings.log_level.upper())
 # ---------------------------------------------------------------------------
 # LangChain Structured Tools wrapping sync DB functions
 # - insert_decision_tool: calls persist_new_decision
-# - fetch_prompts_tool: calls get_active_prompts
 # ---------------------------------------------------------------------------
 class InsertDecisionInput(BaseModel):
     decision_package_json: str
@@ -83,26 +80,6 @@ insert_decision_tool = StructuredTool.from_function(
     name="insert_decision",
     description="Persist a DecisionPackage into the decisions table and return the new id.",
 )
-
-
-class FetchPromptsInput(BaseModel):
-    dummy: str = Field("", description="Compatibility placeholder")
-
-
-def fetch_prompts_tool_func(dummy: str = "") -> str:
-    """
-    Return the list of active prompts as a string (JSON serialized) for the LLM/tooling.
-    """
-    prompts = get_active_prompts()
-    return json.dumps(prompts, ensure_ascii=False)
-
-
-fetch_prompts_tool = StructuredTool.from_function(
-    func=fetch_prompts_tool_func,
-    name="fetch_prompts",
-    description="Retrieve active prompts from the DB and return them as JSON string.",
-)
-
 
 def _create_rule_tool_func(rule_text: str, priority: str, expires_at: Optional[str] = None) -> str:
     return json.dumps({

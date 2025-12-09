@@ -1,6 +1,6 @@
 # app/models.py
 from pydantic import BaseModel, Field
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 
 class Observation(BaseModel):
     entity_id: str
@@ -40,3 +40,39 @@ class QueryRequest(BaseModel):
 
 class AgentResponse(BaseModel):
     output: str
+
+class ChatRequest(BaseModel):
+    instruction: str
+
+class ToolCallContext(BaseModel):
+    conversation_id: Optional[str] = Field(
+        None, description="Unique conversation/session identifier."
+    )
+    user_id: Optional[str] = Field(
+        None, description="Identifier of the user or client."
+    )
+    metadata: Optional[Dict[str, Any]] = Field(
+        default=None, description="Additional metadata sent by the MCP client."
+    )
+
+
+class AgentRequest(BaseModel):
+    instruction: str = Field(..., description="User prompt or instruction.")
+    tool_context: Optional[ToolCallContext] = Field(
+        default=None, description="Metadata injected by FastMCP (conversation_id, user_id, etc.)."
+    )
+
+
+class AgentResponse(BaseModel):
+    output: str = Field(..., description="Generated response from the agent.")
+    finished: bool = Field(default=True, description="Indicates if the agent finished processing.")
+    debug: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Optional debugging information (timings, metadata, raw outputs, etc.)."
+    )
+    
+class DecisionPackageMCP(BaseModel):
+    decision_type: str = Field(..., description="ACTION, NO_ACTION, or EVALUATE")
+    reasoning: str = Field(..., description="Justificación detallada de la decisión")
+    target_entity: Optional[str] = Field(None, description="Entidad objetivo para la acción")
+    action_params: Optional[Dict[str, Any]] = Field(default=None, description="Parámetros de acción específicos")
