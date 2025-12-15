@@ -69,17 +69,16 @@ def execute_decision(decision_id: int, db_path: Optional[str] = None, ha_api: Op
       - updates DB status and execution summary
     """
     logger.info("🔧 Executing decision id=%s", decision_id)
-
+    
     # 1) Load decision
     row = get_decision_by_id(decision_id)
     if not row:
         logger.error("Decision id=%s not found.", decision_id)
         raise ValueError("Decision not found")
-
+    
     # determine decision_package dict
     decision_pkg = row.get("decision_package")
     if decision_pkg is None:
-        # maybe stored as raw JSON string under decision_package_json
         raw_json = row.get("decision_package_json")
         if raw_json:
             try:
@@ -91,9 +90,8 @@ def execute_decision(decision_id: int, db_path: Optional[str] = None, ha_api: Op
             _schedule_broadcast(decision_id, "FAILED")
             return {"status": "FAILED", "reason": "Missing decision_package"}
 
-    # 2) Safety check (executor level)
+    # 2) Safety check
     try:
-        # safety_check_tool_func expects a JSON string; pass serialized package
         safety_input = json.dumps(decision_pkg, ensure_ascii=False)
         safety_result = safety_check_tool_func(safety_input)
         logger.info("Safety check for decision %s -> %s", decision_id, safety_result)
@@ -121,57 +119,88 @@ def execute_decision(decision_id: int, db_path: Optional[str] = None, ha_api: Op
     overall_failed = False
 
     for action in actions:
-        try:
-            # Normalize keys
-            action_name = action.get("action") or action.get("service") or ""
-            target = action.get("target_entity") or action.get("entity_id") or ""
-            params = action.get("parameters") or {}
+        action_name = action.get("action") or action.get("service") or ""
+        target = action.get("target_entity") or action.get("entity_id") or ""
+        params = action.get("parameters") or {}
 
+        try:
             if not target or "." not in target:
                 raise ValueError(f"Invalid target_entity: {target}")
-            
+
             domain = target.split(".", 1)[0]
             service = action_name
 
             if domain == "climate" and service == "set_temperature":
-                # Home Assistant espera 'temperature', no 'value' para climate services.
-                # Aseguramos que el parámetro correcto se pasa al API.
                 if "value" in params:
                     params["temperature"] = params.pop("value")
-                # HA necesita el entity_id en el cuerpo de la llamada para el servicio set_temperature
                 params["entity_id"] = target
-                # Nota: HomeAssistantAPI.call_service ya maneja entity_id en la URL/cuerpo si es necesario, 
-                # pero es mejor asegurarnos que 'temperature' esté presente si fue pasado como 'value'.
                 if "temperature" not in params and "target_temp" in action:
                     params["temperature"] = action["target_temp"]
 
             logger.info("Calling HA service %s.%s for %s params=%s", domain, service, target, params)
-            
-            # call_service internamente manejará la estructura final JSON para el API de HA
-            res = ha.call_service(domain=domain, service=service, entity_id=target, data=params) 
-            
-            action_results.append({"action": action, "result": res, "status": "OK"})
-            logger.info("Action executed OK for decision %s: %s", decision_id, action)
+            res = ha.call_service(domain=domain, service=service, entity_id=target, data=params)
+
+            action_results.append({
+                "action": action,
+                "result": res,
+                "status": "OK"
+            })
+            logger.info("Action executed OK for decision %s: %s -> %s", decision_id, action, res)
+
         except Exception as e:
             logger.exception("Action execution failed for decision %s: %s", decision_id, e)
-            action_results.append({"action": action, "error": str(e), "status": "FAILED"})
+            action_results.append({
+                "action": action,
+                "result": str(e),
+                "status": "FAILED"
+            })
             overall_failed = True
 
     # 4) Persist execution results
+    action_summary_list = []
+    target_entities_list = []
+
+    for a in action_results:
+        action_dict = a.get("action", {})
+        status = a.get("status", "FAILED")
+        result = a.get("result") if status == "OK" else [a.get("result")]
+
+        action_summary_list.append({
+            "action_name": action_dict.get("action") or action_dict.get("service"),
+            "target_entity": action_dict.get("target_entity") or action_dict.get("entity_id"),
+            "parameters": action_dict.get("parameters") or {},
+            "result": result,
+            "status": status
+        })
+
+        target_entity = action_dict.get("target_entity") or action_dict.get("entity_id")
+        if target_entity:
+            target_entities_list.append(target_entity)
+
     try:
-        summary = json.dumps(action_results, ensure_ascii=False)
+        action_summary_json = json.dumps(action_summary_list, ensure_ascii=False)
     except Exception:
-        summary = str(action_results)
+        action_summary_json = str(action_summary_list)
 
+    target_entity_str = ",".join(target_entities_list)
+    action_result_status = "OK" if not overall_failed else "Error in one or more actions"
     executed_action_summary = "; ".join(
-        [f"{a.get('action') or a.get('service')} on {a.get('target_entity') or a.get('entity_id')}" for a in actions]
+        [f'{a["action_name"]} on {a["target_entity"]}' for a in action_summary_list]
     )
+    
+    final_status = "FAILED" if overall_failed else "EXECUTED"
 
-    if overall_failed:
-        update_decision_status(decision_id, "FAILED", action_summary=summary, executed_action=executed_action_summary, action_result=summary)
-        _schedule_broadcast(decision_id, "FAILED")
-        return {"status": "FAILED", "actions": action_results}
-    else:
-        update_decision_status(decision_id, "EXECUTED", action_summary=summary, executed_action=executed_action_summary, action_result=summary)
-        _schedule_broadcast(decision_id, "EXECUTED")
-        return {"status": "EXECUTED", "actions": action_results}
+    update_decision_status(
+        decision_id,
+        final_status,
+        action_summary=action_summary_json,
+        executed_action=executed_action_summary,
+        action_result=action_result_status,
+        target_entity=target_entity_str
+    )
+    _schedule_broadcast(decision_id, final_status)
+
+    return {
+        "status": final_status,
+        "actions": action_summary_list
+    }

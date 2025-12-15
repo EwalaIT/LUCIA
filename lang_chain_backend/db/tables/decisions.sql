@@ -13,6 +13,6 @@ CREATE TABLE "decisions" (
     notes TEXT,
     rule_proposals_json TEXT,
     rule_cot TEXT,
-    rule_status TEXT DEFAULT 'NONE' CHECK (rule_status IN ('NONE', 'IN_PROGRESS', 'RULES_READY', 'RULES_APPLIED')),
+    rule_status TEXT DEFAULT 'NONE' CHECK (rule_status IN ('NONE', 'IN_PROGRESS', 'RULES_READY', 'RULES_APPLIED', 'RULES_FAILED')),
     created_at TEXT NOT NULL 
-)
+);

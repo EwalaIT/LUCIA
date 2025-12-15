@@ -195,16 +195,22 @@ def get_rule_proposals():
     # El Frontend espera recibir las propuestas si el estado es RULES_READY
     is_ready = decision.status == "RULES_READY"
     
+    id = decision.id
+    status = decision.status
+    rule_proposals_json = decision.rule_proposals_json
+    rule_cot = decision.rule_cot
+    rule_status = decision.rule_status
+    
     db.close()
 
     return jsonify({
-        "decision_id": decision.id,
-        "status": decision.status,
+        "decision_id": id,
+        "status": status,
         "is_ready": is_ready,
         # Devolvemos el borrador (JSON string) y el CoT
-        "rule_proposals_json": decision.rule_proposals_json,
-        "rule_cot": decision.rule_cot,
-        "rule_status": decision.rule_status
+        "rule_proposals_json": rule_proposals_json,
+        "rule_cot": rule_cot,
+        "rule_status": rule_status
     })
 
 
