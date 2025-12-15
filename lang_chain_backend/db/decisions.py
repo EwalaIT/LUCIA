@@ -219,7 +219,8 @@ def update_decision_status(
     status: str,
     action_summary: Optional[str] = None,
     executed_action: Optional[str] = None,
-    action_result: Optional[str] = None
+    action_result: Optional[str] = None,
+    target_entity: Optional[str] = None,
 ):
     conn = _get_conn()
     try:
@@ -230,9 +231,10 @@ def update_decision_status(
                 status = COALESCE(?, status),
                 action_summary = COALESCE(?, action_summary),
                 executed_action = COALESCE(?, executed_action),
-                action_result = COALESCE(?, action_result)
+                action_result = COALESCE(?, action_result),
+                target_entity = COALESCE(?, target_entity)
             WHERE id = ?;
-        """, (status, action_summary, executed_action, action_result, decision_id))
+        """, (status, action_summary, executed_action, action_result, target_entity,decision_id))
         conn.commit()
         logger.info(f"📝 Decision {decision_id} status updated -> {status}")
     finally:

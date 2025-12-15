@@ -65,7 +65,7 @@ echo ""
 # ============================================================
 echo "🤖 Arrancando LangChain Backend (FastAPI + uvicorn)..."
 cd "$LANGCHAIN_BACKEND" || exit 1
-source "$LANGCHAIN_VENV"
+. "$LANGCHAIN_VENV"
 nohup uvicorn app.main:app --reload > "$LOG_DIR/langchain_backend.log" 2>&1 &
 echo $! > "$LOG_DIR/langchain_backend.pid"
 echo "   ➤ LangChain Backend PID: $(cat $LOG_DIR/langchain_backend.pid)"
@@ -89,5 +89,3 @@ echo "   kill \$(cat $LOG_DIR/frontend.pid)"
 echo "   kill \$(cat $LOG_DIR/setup_wizard_backend.pid)"
 echo "   kill \$(cat $LOG_DIR/setup_wizard_frontend.pid)"
 echo "   kill \$(cat $LOG_DIR/langchain_backend.pid)"
-echo ""
-echo "O si quieres, te genero un stop.sh para matarlos todos automáticamente."

@@ -40,7 +40,7 @@ def list_rules():
         query = query.filter(Rule.active == payload["active"])
 
     if "created_by" in payload and payload["created_by"]:
-        if payload["created_by"] not in ("user", "decisor", "evaluator"):
+        if payload["created_by"] not in ("user", "decisor", "evaluator", "chat"):
             return jsonify({"error": "Invalid created_by"}), 400
         query = query.filter(Rule.created_by == payload["created_by"])
 
@@ -121,12 +121,13 @@ def create_rule():
         active=True,
         last_modified=datetime.utcnow(),
     )
-
+    
+    id = rule.id
     db.add(rule)
     db.commit()
     db.close()
 
-    return jsonify({"created": True, "id": rule.id})
+    return jsonify({"created": True, "id": id})
 
 
 # ============================================================
@@ -167,10 +168,11 @@ def update_rule():
             rule.expires_at = None
 
     rule.last_modified = datetime.utcnow()
+    id = rule.id
     db.commit()
     db.close()
 
-    return jsonify({"updated": True, "id": rule.id})
+    return jsonify({"updated": True, "id": id})
 
 
 # ============================================================
@@ -195,10 +197,11 @@ def delete_rule():
         rule.active = False
         rule.last_modified = datetime.utcnow()
 
+    id = rule.id
     db.commit()
     db.close()
     
-    return jsonify({"deleted": True, "id": rule.id})
+    return jsonify({"deleted": True, "id": id})
 
 
 # ============================================================
@@ -217,9 +220,10 @@ def toggle_rule():
     if not rule:
         return jsonify({"error": "Rule not found"}), 404
 
-    rule.active = not rule.active
+    active = rule.active = not rule.active
+    id = rule.id
     rule.last_modified = datetime.utcnow()
     db.commit()
     db.close()
 
-    return jsonify({"toggled": True, "id": rule.id, "active": rule.active})
+    return jsonify({"toggled": True, "id": id, "active": active})
