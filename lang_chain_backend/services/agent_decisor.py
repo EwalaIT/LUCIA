@@ -59,8 +59,7 @@ def _build_prompt(rules_context: str, current_time: str) -> str:
         You have access to the **Decision Safety Check Tool**.
         1. **Data Analysis:** The current state and context are provided below. Analyze this data against 'Active Rules'.
         2. **Formulation:** Define necessary actions (if any) in the `suggested_actions` list.
-        3. **Verification (MANDATORY for ACTION):** If `decision_type` is **ACTION**, you MUST call the `safety_check` tool with the *entire proposed DecisionPackage JSON* as input before finalizing.
-        4. **Final Output (MANDATORY):** Your last response MUST ONLY be the **RAW JSON Object** of the DecisionPackage.
+        3. **Final Output (MANDATORY):** Your last response MUST ONLY be the **RAW JSON Object** of the DecisionPackage.
 
         ### OUTPUT FORMAT SPECIFICATION
         Your final response must be a **RAW JSON Object** (no markdown formatting, no ```json wrappers).
@@ -92,7 +91,7 @@ def create_decisor_agent(llm: BaseLanguageModel):
     ]
 
     try:
-        llm_with_tools = llm.bind_tools(tools)
+        llm_with_tools = llm
 
         logger.info("✅ Decisor Agent (LLM + Tools) creado correctamente.")
         return llm_with_tools
@@ -109,7 +108,7 @@ async def run_decisor(app, ha_instance: str, context: dict, reason: str = "obser
     """
     llm_with_tools = getattr(app.state, "agents", {}).get("decisor")
 
-    current_time = datetime.now(timezone.utc).isoformat()
+    current_time = datetime.now().isoformat()
     dynamic_prompt = _build_prompt(rules_context, current_time)
      
     if not llm_with_tools:
@@ -163,7 +162,7 @@ async def run_decisor(app, ha_instance: str, context: dict, reason: str = "obser
     # Buscamos y extraemos el bloque JSON si el modelo falló en modo `format="json"`.
     # Esto es manejado por _extract_json_from_text, pero forzamos la conversión a str primero.
     if not isinstance(raw, str):
-        raw = str(raw)
+        raw = str(raw)    
 
     # Try to extract JSON from raw text
     try:
@@ -199,17 +198,23 @@ async def run_decisor(app, ha_instance: str, context: dict, reason: str = "obser
     # Persist decision
     actions = dp.get("suggested_actions", [])
     
+    target_entities_list = [a.get("target_entity") or a.get("entity_id") for a in actions if (a.get("target_entity") or a.get("entity_id"))]
+    target_entity_str = ",".join(target_entities_list)
+    
     if actions and dp.get("decision_type") == "ACTION":
-        # Usamos la primera acción para la BBDD
-        first_action = actions[0]
-        target_entity = first_action.get("target_entity")
-        executed_action = first_action.get("action")
-        # Creamos un resumen simple
-        action_summary = f"{executed_action} on {target_entity}"
+        action_summary = json.dumps([
+        {
+            "action": a,
+            "result": [],
+            "status": "OK"
+        } for a in actions
+        ], ensure_ascii=False)
+        executed_action = "; ".join([f"{a.get('action')} on {a.get('target_entity')}" for a in actions])
     elif dp.get("decision_type") == "NO_ACTION":
         action_summary = "NO_ACTION determined by LLM."
         target_entity = None
         executed_action = None
+        target_entity_str = None
     else:
         action_summary = f"Unknown decision type: {dp.get('decision_type')}"
         target_entity = None
@@ -224,9 +229,8 @@ async def run_decisor(app, ha_instance: str, context: dict, reason: str = "obser
             reasoning=dp.get("chain_of_thought"),
             confidence=dp.get("confidence"),
             status="PENDING",
-            # NUEVOS CAMPOS
             action_summary=action_summary,
-            target_entity=target_entity,
+            target_entity=target_entity_str,
             executed_action=executed_action,
         )
     except Exception as e:
