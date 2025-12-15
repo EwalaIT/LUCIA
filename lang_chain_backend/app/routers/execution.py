@@ -27,6 +27,7 @@ async def execute_decision_endpoint(decision_id: int, request: Request):
 
     # Execute asynchronously
     try:
+        llm = request.app.state.agents.get("llm")
         result = await async_execute_decision(decision_id, app.state.db_path, ha_api, llm=llm)
     except Exception as e:
         logger.exception("Decision execution failed")

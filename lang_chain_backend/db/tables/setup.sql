@@ -1,0 +1,9 @@
+CREATE TABLE setup (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_id INTEGER NOT NULL,
+    config_name VARCHAR(100),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'draft',
+    FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+);

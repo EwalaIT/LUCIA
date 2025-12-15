@@ -290,7 +290,7 @@ export default function ZoneSchedule({ zones = [], schedules = [], setSchedules 
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-red-500 hover:text-red-700"
+                  className="!p-0 !px-0 !py text-red-500 hover:text-red-700"
                   onClick={() => removeSchedule(idx)}
                 >
                   <Trash2 className="h-5 w-5" />
