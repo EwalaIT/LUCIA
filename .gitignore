@@ -147,6 +147,8 @@ helm/**/.values.yaml
 # Entornos virtuales y config
 # ==========================
 venv/
+.env*
+*.env
 .env
 *__pycache__/
 *__pycache__*
