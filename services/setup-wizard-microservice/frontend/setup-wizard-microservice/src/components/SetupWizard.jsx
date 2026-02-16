@@ -12,7 +12,8 @@ import {
 } from "../services/schedulesService";
 import { getHaSummary } from "../services/zonesService";
 
-const API_BASE = import.meta.env.VITE_SETUP_WIZARD_API_BASE_URL || "http://setup-wizard-backend:8080/api";
+const API_BASE = import.meta.env.VITE_SETUP_WIZARD_API_BASE_URL;
+const HOST = import.meta.env.HOST;
 
 export default function SetupWizard() {
   const [step, setStep] = useState(1);
@@ -70,7 +71,7 @@ export default function SetupWizard() {
       } else if (action === "saveSchedules") {
         await saveSetupSchedules(schedules);
         alert("Configuration saved successfully!");
-        window.location.href = "http://192.168.230.142:3090/c/new";
+        window.location.href = `${HOST}:3090/c/new`;
       } else if (action === "cancel") {
         setStep(1);
         setCompanyResp(null);

@@ -117,11 +117,22 @@ def ha_summary():
 
     # ----- Try to get HA data -----
     try:
+        logger.info("[HA] Fetching areas, devices, entities, and states from Home Assistant...")
+
         areas = get_ha_areas()
+        logger.info(f"[HA] Retrieved {len(areas)} areas: {areas[:3]}...")  # mostrar solo 3 para no saturar logs
+
         devices_reg = get_ha_devices()
+        logger.info(f"[HA] Retrieved {len(devices_reg)} devices: {devices_reg[:3]}...")
+
         entities_reg = get_ha_entities()
+        logger.info(f"[HA] Retrieved {len(entities_reg)} entities: {entities_reg[:3]}...")
+
         states = get_states()
-    except Exception:
+        logger.info(f"[HA] Retrieved {len(states)} states from /api/states: {states[:3]}...")
+
+    except Exception as e:
+        logger.exception("[HA] Error fetching data from Home Assistant, falling back to DB")
         return build_db_fallback(db)
 
     now = datetime.utcnow()
@@ -166,12 +177,14 @@ def ha_summary():
                 db.flush()
                 db_devices[ha_dev_id] = dev
             else:
+                logger.debug(f"[HA] Device {dev.name} ({ha_dev_id}) assigned to entity {eid}")
                 dev.last_sync = now
                 db.add(dev)
 
         # ---- ENTITY ----
         ent = db_entities.get(eid)
         if not ent:
+            logger.debug(f"[HA] Creating entity: {eid}, device_id: {ha_dev_id}, friendly_name: {friendly}")
             ent = Entity(
                 device=dev,
                 entity_id=eid,
@@ -183,6 +196,7 @@ def ha_summary():
             db.add(ent)
             db_entities[eid] = ent
         else:
+            logger.debug(f"[HA] Updating entity: {eid}, device_id: {ha_dev_id}")
             ent.device = dev
             ent.friendly_name = friendly
             ent.unit = unit or ent.unit
@@ -340,55 +354,6 @@ def build_db_fallback(db):
     
     db.close()
 
-    return jsonify({
-        "zones": zones,
-        "devices": list(devices_map.values()),
-        "entities": entities_out
-    })
-
-# ---------------------------------------------------------
-# Fallback: no HA available
-# ---------------------------------------------------------
-def build_db_fallback(db):
-    devices = []
-    entities_out = []
-
-    devices_map = {}
-    for d in db.query(Device).all():
-        devices_map[d.id] = {
-            "id": d.id,
-            "name": d.name,
-            "ha_device_id": d.ha_device_id,
-            "type": d.type,
-            "area_id": None,
-            "entities": []
-        }
-
-    for e in db.query(Entity).all():
-        payload = {
-            "id": e.id,
-            "entity_id": e.entity_id,
-            "friendly_name": e.friendly_name,
-            "unit": e.unit,
-            "selected": bool(e.selected),
-            "device_id": e.device_id
-        }
-        entities_out.append(payload)
-        if e.device_id in devices_map:
-            devices_map[e.device_id]["entities"].append(payload)
-
-    zones = [
-        {
-            "id": z.id,
-            "area_id": z.area_id,
-            "name": z.name,
-            "description": z.description,
-            "devices": []
-        }
-        for z in db.query(Zone).all()
-    ]
-    
-    db.close()
     return jsonify({
         "zones": zones,
         "devices": list(devices_map.values()),

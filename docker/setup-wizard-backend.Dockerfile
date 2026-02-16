@@ -5,6 +5,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Poetry
@@ -16,11 +17,11 @@ RUN poetry config virtualenvs.create false
 COPY services/setup-wizard-microservice/backend/pyproject.toml \
     services/setup-wizard-microservice/backend/poetry.lock* ./
 
-RUN poetry install --no-interaction --no-ansi --only main
+RUN poetry install --no-interaction --no-ansi --no-root --only main
 
 # App
-COPY services/setup-wizard-microservice/backend ./
+COPY services/setup-wizard-microservice/backend/setup-wizard-microservice ./
 
 EXPOSE 8080
 
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "setup-wizard-microservice.app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--threads", "4", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "debug", "app:app"]

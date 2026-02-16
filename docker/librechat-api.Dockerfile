@@ -1,39 +1,25 @@
-# Base Node.js
-FROM node:20
+FROM node:20-slim
 
-# -----------------------------
-# Workdir
-# -----------------------------
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# -----------------------------
-# Copiar package.json + lock
-# -----------------------------
-COPY librechat/package*.json ./
+COPY librechat/ ./
 
-# -----------------------------
-# Instalación dependencias
-# -----------------------------
+RUN npm install --legacy-peer-deps
+
+RUN npm run build:packages
+
+
+WORKDIR /app/client
+
 RUN npm install
 
-# -----------------------------
-# Copiar todo el código
-# -----------------------------
-COPY librechat .
+RUN npm run build
 
-# -----------------------------
-# Variables de entorno
-# -----------------------------
-# LibreChat backend las lee del .env
-# No hardcodeamos nada aquí
+WORKDIR /app
+
 ENV NODE_ENV=development
-
-# -----------------------------
-# Expose dev port
-# -----------------------------
 EXPOSE 3080
 
-# -----------------------------
-# CMD para desarrollo
-# -----------------------------
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "backend:dev"]

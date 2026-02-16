@@ -67,8 +67,7 @@ export default function useSideNavLinks({
   
   const { data: startupConfig } = useGetStartupConfig();
 
-  const SETUP_URL =
-    import.meta.env.VITE_SETUP_WIZARD_URL || 'http://localhost:5174';
+  const SETUP_URL = import.meta.env.VITE_SETUP_WIZARD_BASE_URL;
 
   const goToSetup = (path = '') => {
     window.location.href = `${SETUP_URL}${path}`;

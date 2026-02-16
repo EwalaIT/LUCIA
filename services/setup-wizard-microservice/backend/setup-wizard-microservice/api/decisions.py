@@ -3,7 +3,7 @@ import requests
 from . import bp, session
 
 from models import Decision
-from config import LANGCHAIN_BACKEND_URL
+from config import settings
 
 import logging
 
@@ -122,7 +122,7 @@ def update_decision():
     
     # 3. Llamar al LangChain Backend para iniciar la generación de reglas
     try:
-        LANGCHAIN_TRIGGER_URL = f"{LANGCHAIN_BACKEND_URL}/api/rules/generate"
+        LANGCHAIN_TRIGGER_URL = f"{settings.langchain_backend_url}/api/rules/generate"
         
         # El payload debe coincidir con los parámetros que espera el endpoint de LangChain
         trigger_payload = {
@@ -228,7 +228,7 @@ def apply_rule_proposals():
         
     # 1. Llamar al LangChain Backend para ejecutar la aplicación
     try:
-        LANGCHAIN_APPLY_URL = f"{LANGCHAIN_BACKEND_URL}/api/rules/apply"
+        LANGCHAIN_APPLY_URL = f"{settings.langchain_backend_url}/api/rules/apply"
         
         logger.info("Applying rule proposals for Decision %s", payload["decision_id"])
         

@@ -2,7 +2,7 @@ from flask import Blueprint
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from models import Base
-from config import SQLALCHEMY_DATABASE_URI
+from config import settings
 
 import logging
 
@@ -11,9 +11,11 @@ logger = logging.getLogger(__name__)
 # 1. Definir el Blueprint central (que se exportará a todos los módulos)
 bp = Blueprint("api", __name__, url_prefix="/api")
 
+db_url = f"sqlite:///{settings.db_path}"
+
 # 2. Inicializar la DB una sola vez
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URI,
+    db_url,
     connect_args={"check_same_thread": False}
 )
 Base.metadata.create_all(engine)

@@ -3,12 +3,15 @@
 # -----------------------------
 FROM node:20-alpine AS builder
 
+ARG VITE_SETUP_WIZARD_API_BASE_URL
+ENV VITE_SETUP_WIZARD_API_BASE_URL=$VITE_SETUP_WIZARD_API_BASE_URL
+
 WORKDIR /app
 
-COPY services/setup_wizard_frontend/package*.json ./
+COPY services/setup-wizard-microservice/frontend/setup-wizard-microservice/package*.json ./
 RUN npm ci
 
-COPY services/setup_wizard_frontend .
+COPY services/setup-wizard-microservice/frontend/setup-wizard-microservice .
 RUN npm run build
 
 # -----------------------------
