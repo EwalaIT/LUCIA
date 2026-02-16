@@ -22,5 +22,4 @@ COPY services/lang_chain_backend .
 
 EXPOSE 8001
 
-CMD ["python", "mcp-server.py"]
-
+CMD ["python", "-m", "app.mcp-server"]

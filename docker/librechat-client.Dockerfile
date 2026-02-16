@@ -1,38 +1,24 @@
-# Base Node.js
-FROM node:20
+FROM node:20-slim
 
-# -----------------------------
-# Workdir
-# -----------------------------
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# -----------------------------
-# Copiar package.json + lock
-# -----------------------------
-COPY librechat/client/package*.json ./
+COPY librechat/ ./
 
-# -----------------------------
-# Instalación dependencias
-# -----------------------------
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
-# -----------------------------
-# Copiar todo el frontend
-# -----------------------------
-COPY librechat/client .
+RUN npm run build:packages
 
-# -----------------------------
-# Variables de entorno
-# -----------------------------
-ENV NODE_ENV=development
-# VITE_API_URL se puede pasar desde .env en docker-compose
+WORKDIR /app/client
 
-# -----------------------------
-# Expose dev port
-# -----------------------------
-EXPOSE 5173
+ARG VITE_SETUP_WIZARD_BASE_URL
+ENV VITE_SETUP_WIZARD_BASE_URL=$VITE_SETUP_WIZARD_BASE_URL
 
-# -----------------------------
-# CMD para desarrollo
-# -----------------------------
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+RUN npm install
+
+RUN npm run build
+
+EXPOSE 3090
+
+CMD ["npm", "run", "preview-prod", "--", "--host", "0.0.0.0"]

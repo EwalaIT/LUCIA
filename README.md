@@ -1,96 +1,274 @@
 <p align="center">
-  <a href="https://ewala.es">
-    <img src="client/public/assets/logo-lucia.png" height="128">
+  <a href="https://ewala.es/#elias">
+    <img src="librechat/client/public/assets/logo-lucia.png" height="128">
   </a>
-  <h1 align="center">
-    <a href="https://ewala.es/#elias">LUCIA</a>
-  </h1>
+</p>
+<p align="center"><strong>Learning Urban Cognitive Intelligence for Autonomous Buildings</strong></p>
+<p align="center">
+  <a href="https://ewala.es/">
+    <img src="librechat/client/public/assets/EWALA.png" height="40">
+  </a>
 </p>
 
-# ✨ Features
 
-- 🖥️ **UI & Experience** inspired by ChatGPT with enhanced design and features
+---
 
-- 🤖 **AI Model Selection**:  
-  - Anthropic (Claude), AWS Bedrock, OpenAI, Azure OpenAI, Google, Vertex AI, OpenAI Responses API (incl. Azure)
-  - [Custom Endpoints](https://www.librechat.ai/docs/quick_start/custom_endpoints): Use any OpenAI-compatible API with LibreChat, no proxy required
-  - Compatible with [Local & Remote AI Providers](https://www.librechat.ai/docs/configuration/librechat_yaml/ai_endpoints):
-    - Ollama, groq, Cohere, Mistral AI, Apple MLX, koboldcpp, together.ai,
-    - OpenRouter, Perplexity, ShuttleAI, Deepseek, Qwen, and more
+## 🧠 What is LUCIA?
 
-- 🔧 **[Code Interpreter API](https://www.librechat.ai/docs/features/code_interpreter)**: 
-  - Secure, Sandboxed Execution in Python, Node.js (JS/TS), Go, C/C++, Java, PHP, Rust, and Fortran
-  - Seamless File Handling: Upload, process, and download files directly
-  - No Privacy Concerns: Fully isolated and secure execution
+**LUCIA** is an open-source, local-first, multi-agent AI platform designed for **autonomous decision-making, energy optimization, and intelligent environment control**.
 
-- 🔦 **Agents & Tools Integration**:  
-  - **[LibreChat Agents](https://www.librechat.ai/docs/features/agents)**:
-    - No-Code Custom Assistants: Build specialized, AI-driven helpers
-    - Agent Marketplace: Discover and deploy community-built agents
-    - Collaborative Sharing: Share agents with specific users and groups
-    - Flexible & Extensible: Use MCP Servers, tools, file search, code execution, and more
-    - Compatible with Custom Endpoints, OpenAI, Azure, Anthropic, AWS Bedrock, Google, Vertex AI, Responses API, and more
-    - [Model Context Protocol (MCP) Support](https://modelcontextprotocol.io/clients#librechat) for Tools
+It combines:
+- Conversational AI (LibreChat)
+- Agentic reasoning (LangChain)
+- Vision-based contextual understanding (Vision LLMs)
+- Real-world actuation (Home Assistant)
+- Governance, evaluation, and rule generation (Setup Wizard)
 
-- 🔍 **Web Search**:  
-  - Search the internet and retrieve relevant information to enhance your AI context
-  - Combines search providers, content scrapers, and result rerankers for optimal results
-  - **Customizable Jina Reranking**: Configure custom Jina API URLs for reranking services
-  - **[Learn More →](https://www.librechat.ai/docs/features/web_search)**
+LUCIA is built to run **fully on-premise**, using **local LLMs via Ollama**, and is designed for **edge, industrial, and privacy-sensitive environments**.
 
-- 🪄 **Generative UI with Code Artifacts**:  
-  - [Code Artifacts](https://youtu.be/GfTj7O4gmd0?si=WJbdnemZpJzBrJo3) allow creation of React, HTML, and Mermaid diagrams directly in chat
+---
 
-- 🎨 **Image Generation & Editing**
-  - Text-to-image and image-to-image with [GPT-Image-1](https://www.librechat.ai/docs/features/image_gen#1--openai-image-tools-recommended)
-  - Text-to-image with [DALL-E (3/2)](https://www.librechat.ai/docs/features/image_gen#2--dalle-legacy), [Stable Diffusion](https://www.librechat.ai/docs/features/image_gen#3--stable-diffusion-local), [Flux](https://www.librechat.ai/docs/features/image_gen#4--flux), or any [MCP server](https://www.librechat.ai/docs/features/image_gen#5--model-context-protocol-mcp)
-  - Produce stunning visuals from prompts or refine existing images with a single instruction
+## 🧭 Design Principles
 
-- 💾 **Presets & Context Management**:  
-  - Create, Save, & Share Custom Presets  
-  - Switch between AI Endpoints and Presets mid-chat
-  - Edit, Resubmit, and Continue Messages with Conversation branching  
-  - Create and share prompts with specific users and groups
-  - [Fork Messages & Conversations](https://www.librechat.ai/docs/features/fork) for Advanced Context control
+- Local-first and privacy-preserving by default
+- Explainability over black-box automation
+- Human-in-the-loop governance
+- Modular, replaceable components
+- Edge-ready, cloud-optional
 
-- 💬 **Multimodal & File Interactions**:  
-  - Upload and analyze images with Claude 3, GPT-4.5, GPT-4o, o1, Llama-Vision, and Gemini 📸  
-  - Chat with Files using Custom Endpoints, OpenAI, Azure, Anthropic, AWS Bedrock, & Google 🗃️
+---
 
-- 🌎 **Multilingual UI**:
-  - English, 中文 (简体), 中文 (繁體), العربية, Deutsch, Español, Français, Italiano
-  - Polski, Português (PT), Português (BR), Русский, 日本語, Svenska, 한국어, Tiếng Việt
-  - Türkçe, Nederlands, עברית, Català, Čeština, Dansk, Eesti, فارسی
-  - Suomi, Magyar, Հայերեն, Bahasa Indonesia, ქართული, Latviešu, ไทย, ئۇيغۇرچە
+## 🎯 Target Use Cases
 
-- 🧠 **Reasoning UI**:  
-  - Dynamic Reasoning UI for Chain-of-Thought/Reasoning AI models like DeepSeek-R1
+- Smart buildings & energy optimization
+- Industrial automation
+- Research & experimentation
+- Edge AI deployments (Edge ≠ “Raspberry Pi”)
+- Privacy-first AI systems
+- Human-in-the-loop autonomous systems
 
-- 🎨 **Customizable Interface**:  
-  - Customizable Dropdown & Interface that adapts to both power users and newcomers
+---
 
-- 🗣️ **Speech & Audio**:  
-  - Chat hands-free with Speech-to-Text and Text-to-Speech  
-  - Automatically send and play Audio  
-  - Supports OpenAI, Azure OpenAI, and Elevenlabs
+## ✨ Core Features
 
-- 📥 **Import & Export Conversations**:  
-  - Import Conversations from LibreChat, ChatGPT, Chatbot UI  
-  - Export conversations as screenshots, markdown, text, json
+### 🤖 Multi-Agent Architecture
+- Autonomous AI agents powered by **LangChain**
+- Clear separation of responsibilities:
+  - Decision-making agents
+  - Evaluation agents
+  - Rule-generation agents
+  - Chat-driven command agents
+- Agents can:
+  - Analyze structured data
+  - Consume sensor history
+  - Use vision-based context
+  - Generate explainable decisions
+  - Propose and manage automation rules
 
-- 🔍 **Search & Discovery**:  
-  - Search all messages/conversations
+---
 
-- 👥 **Multi-User & Secure Access**:
-  - Multi-User, Secure Authentication with OAuth2, LDAP, & Email Login Support
-  - Built-in Moderation, and Token spend tools
+### 💬 Conversational Interface (LibreChat)
+- LibreChat as the **main UI**
+- Native support for:
+  - MCP (Model Context Protocol)
+  - Tool calling
+  - Streaming responses
+- Agents are exposed to the chat via MCP servers
+- Users can **interact directly with agents** as first-class chat participants
 
-- ⚙️ **Configuration & Deployment**:  
-  - Configure Proxy, Reverse Proxy, Docker, & many Deployment options  
-  - Use completely local or deploy on the cloud
+---
 
-- 📖 **Open-Source & Community**:  
-  - Completely Open-Source & Built in Public  
-  - Community-driven development, support, and feedback
+### 🔌 MCP-Driven Integration
+LUCIA makes extensive use of **Model Context Protocol (MCP)**:
 
-[For a thorough review of our features, see our docs here](https://docs.librechat.ai/) 📚
+- **LangChain Agent MCP**
+  - Exposes the agent system to LibreChat
+  - Enables chat-driven actions and reasoning
+
+- **Home Assistant MCP**
+  - Allows agents to read sensor data
+  - Enables agents to trigger real-world actions
+
+This architecture keeps LUCIA modular, extensible, and future-proof.
+
+---
+
+### 👁️ Vision-Aware Intelligence
+- Vision LLM integration via **Home Assistant HAC (VisionLLM)**
+- Vision agents can:
+  - Analyze images
+  - Generate semantic scene descriptions or JSON Response.
+  - Persist contextual knowledge as HA entities
+- Enables reasoning like:
+  > “The room is empty, lights are on, and sunlight is sufficient.”
+
+---
+
+### 🧩 Setup Wizard (Governance)
+The Setup Wizard is a dedicated UI and backend for **governing AI behavior**:
+
+- Select entities of interest (sensors, zones, devices)
+- Review AI-generated decisions
+- Score and evaluate agent behavior
+- Automatically generate rules based on evaluations
+- Manage rules created by:
+  - Human users
+  - Evaluation agents
+  - Chat-command agents
+
+This provides **human-in-the-loop control** over autonomous systems.
+
+---
+
+## 🏗️ High-Level Architecture
+
+```
+User
+ ↓
+LibreChat
+ ↓
+MCP Servers
+ ├─ LangChain MCP
+ └─ Home Assistant MCP
+ ↓
+LangChain Backend
+ ↓
+Ollama (Local LLMs)
+ ↓
+Decisions / Rules
+ ↓
+Home Assistant (Execution)
+```
+All components are orchestrated using **Docker Compose**.
+
+---
+
+## 🧪 Model Strategy
+
+LUCIA supports two deployment modes for Ollama:
+
+### 🔹 Single-Model Mode (Not Recommended)
+- One model handles:
+  - Reasoning
+  - Tool calling
+  - Vision
+- Useful for demos or constrained hardware
+
+Example:
+```
+aliafshar/gemma3-it-qat-tools:12b
+```
+
+
+### 🔹 Dual-Model Mode (Recommended)
+
+| Purpose | Model | VRAM |
+|------|------|------|
+| Reasoning & tools | gemma3-it-qat-tools:12b | ~12–13 GB |
+| Vision | qwen2.5vl:7b | ~8–9 GB |
+
+Minimum recommended VRAM: **24 GB**.
+
+---
+
+## 🧰 Technology Stack
+
+### Frontend
+- LibreChat Client (Vite + React + TypeScript)
+- Setup Wizard Frontend (Vite + React)
+
+### Backend
+- LibreChat API (Next.js)
+- LangChain Backend (FastAPI)
+- LangChain MCP (FastMCP)
+- Setup Wizard Backend (Flask + Gunicorn)
+
+### Infrastructure
+- Docker & Docker Compose
+- MongoDB (LibreChat)
+- PostgreSQL + pgvector (RAG)
+- SQLite (decisions, rules, governance)
+- MeiliSearch (search & indexing)
+
+### Core Components and Licenses
+
+| Component | Description | Technology | License |
+|--------|------------|-----------|---------|
+| LibreChat Client | Conversational web interface | React, Vite | MIT |
+| LibreChat API | Backend for chat, auth, models, MCP | Node.js / Next.js | MIT |
+| LangChain Backend | Agentic reasoning and decision engine | Python, FastAPI, LangChain | MIT |
+| LangChain MCP | MCP server exposing agents to LibreChat | FastMCP | MIT |
+| Setup Wizard Frontend | Governance & evaluation UI | React, Vite | MIT |
+| Setup Wizard Backend | Rules, decisions & governance API | Python, Flask | MIT |
+| Ollama | Local LLM and Vision inference engine | Go | Apache 2.0 |
+| VisionLLM HAC | Vision integration for Home Assistant | Python | Apache 2.0 |
+| Home Assistant | Building automation platform | Python | Apache 2.0 |
+| MongoDB | LibreChat persistence | MongoDB | SSPL / MongoDB License |
+| PostgreSQL | Relational & vector DB | PostgreSQL + pgvector | PostgreSQL License |
+| MeiliSearch | Search & indexing engine | Rust | MIT |
+| Docker & Docker Compose | Container orchestration | Docker | Apache 2.0 |
+
+> ⚠️ Note on licensing  
+> While LUCIA itself is released under the MIT License, it integrates
+> third-party components that are distributed under their own licenses.
+> Users are responsible for ensuring compliance with all applicable licenses,
+> especially when deploying in commercial or production environments.
+
+---
+
+## 📂 Project Structure (Simplified)
+```
+.
+├── docker-compose.yml
+├── env/
+│ ├── lucia.env
+│ └── librechat.env
+├── librechat/
+├── services/
+│ ├── lang_chain_backend/
+│ └── setup-wizard-microservice/
+├── db/
+├── docker/
+└── README.md
+```
+
+---
+
+## 🚀 Deployment (Summary)
+
+1. Install Docker & Docker Compose
+2. Install and run Ollama on the host or a GPU node
+3. Configure environment files:
+   - `.env`
+   - `env/lucia.env`
+   - `env/librechat.env`
+   - `librechat/librechat.yaml`
+4. Build and start:
+   ```bash
+   docker compose build
+   docker compose up -d
+   ```
+
+---
+
+## 🔐 Security
+- Default deployment uses HTTP (local/dev)
+
+- Production deployments should include:
+    - Reverse proxy (Nginx or Traefik)
+    - TLS certificates (Let’s Encrypt)
+    - Firewall rules
+    - Secure Home Assistant tokens
+    - Regular backups of volumes
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License**.  
+See the [LICENSE](LICENSE) file for details.
+
+---
+
+> ⚠️ This repository focuses on orchestration and integration.  
+> Hardware provisioning, GPU drivers, and Home Assistant setup are assumed to be managed externally.

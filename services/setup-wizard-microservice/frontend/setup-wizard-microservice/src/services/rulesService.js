@@ -1,6 +1,6 @@
 import axios from "axios"
 
-const API_BASE = import.meta.env.VITE_SETUP_WIZARD_API_BASE_URL || "http://setup-wizard-backend:8080/api";
+const API_BASE = import.meta.env.VITE_SETUP_WIZARD_API_BASE_URL;
 
 // axios instance con timeout + headers
 const api = axios.create({

@@ -4,7 +4,7 @@ import logging
 from typing import Any, Dict, List, Optional
 import aiohttp
 from aiohttp import ClientConnectionError, WSServerHandshakeError, WSMsgType
-from config import HA_URL, HA_TOKEN
+from config import settings
 
 logger = logging.getLogger(__name__)
 # Simple TTL cache to avoid spam a HA: store results + expiry timestamp
@@ -13,11 +13,11 @@ _CACHE_TTL = 30  # seconds
 
 # Helper: create websocket url from HA_URL
 def _ws_url():
-    if HA_URL.startswith("https://"):
-        return HA_URL.replace("https://", "wss://").rstrip("/") + "/api/websocket"
-    if HA_URL.startswith("http://"):
-        return HA_URL.replace("http://", "ws://").rstrip("/") + "/api/websocket"
-    return HA_URL.rstrip("/") + "/api/websocket"
+    if settings.ha_url.startswith("https://"):
+        return settings.ha_url.replace("https://", "wss://").rstrip("/") + "/api/websocket"
+    if settings.ha_url.startswith("http://"):
+        return settings.ha_url.replace("http://", "ws://").rstrip("/") + "/api/websocket"
+    return settings.ha_url.rstrip("/") + "/api/websocket"
 
 async def _ws_request(commands: List[Dict], timeout: int = 8) -> List[Dict]:
     """
@@ -35,7 +35,7 @@ async def _ws_request(commands: List[Dict], timeout: int = 8) -> List[Dict]:
                 msg = await ws.receive_json(timeout=timeout)
                 if msg.get("type") == "auth_required":
                     # send auth
-                    await ws.send_json({"type": "auth", "access_token": HA_TOKEN})
+                    await ws.send_json({"type": "auth", "access_token": settings.ha_token})
                     auth_msg = await ws.receive_json(timeout=timeout)
                     if auth_msg.get("type") != "auth_ok":
                         raise RuntimeError(f"HA auth failed: {auth_msg}")

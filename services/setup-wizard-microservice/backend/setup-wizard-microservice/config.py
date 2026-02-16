@@ -1,5 +1,6 @@
 # config.py
 from pathlib import Path
+import os
 from pydantic import AnyUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,8 +24,8 @@ class Settings(BaseSettings):
     # ------------------
     # Home Assistant
     # ------------------
-    ha_url: AnyUrl = Field(...)
-    ha_token: str = Field(...)
+    ha_url: str = Field(default=os.getenv("HA_URL"))
+    ha_token: str = Field(default=os.getenv("HA_TOKEN"))
 
     # ------------------
     # LangChain
@@ -37,7 +38,7 @@ class Settings(BaseSettings):
     # App
     # ------------------
     env: str = "development"
-    log_level: str = "INFO"
+    log_level: str = "DEBUG"
 
 
 settings = Settings()

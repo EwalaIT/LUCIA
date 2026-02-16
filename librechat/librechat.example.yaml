@@ -333,7 +333,7 @@ endpoints:
 
     # Ollama
     - name: 'Ollama-Tools'
-      baseURL: 'http://localhost:11434/v1'
+      baseURL: 'http://localhost:11434/v1' # Change to your Ollama server URL if different
       apiKey: 'ollama'            
       models:
         default:

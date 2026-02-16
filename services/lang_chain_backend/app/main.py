@@ -17,7 +17,6 @@ from langchain_ollama import ChatOllama
 from services.agent_decisor import create_decisor_agent
 from services.agent_evaluator import create_evaluator_agent
 from services.agent_db_query import create_db_query_agent
-from services.agent_chat_commander import create_chat_commander_agent
 from services.orchestrator import Orchestrator
 
 # Routers
@@ -92,14 +91,12 @@ async def startup_event():
         decisor_agent = create_decisor_agent(llm=llm)
         evaluator_agent = create_evaluator_agent(llm=llm)
         db_query_agent = create_db_query_agent(llm=llm, db_path=str(settings.db_path))
-        chat_commander_agent = create_chat_commander_agent(llm=llm)
 
         app.state.agents = {
             "llm": llm,
             "decisor": decisor_agent,
             "evaluator": evaluator_agent,
             "db_query": db_query_agent,
-            "chat_commander": chat_commander_agent,
         }
         logger.info("✅ Singleton agents ready and stored in app.state.agents.")
     except Exception as e:
