@@ -1,217 +1,274 @@
 <p align="center">
-  <a href="https://librechat.ai">
-    <img src="client/public/assets/logo.svg" height="256">
+  <a href="https://ewala.es/#elias">
+    <img src="librechat/client/public/assets/logo-lucia.png" height="128">
   </a>
-  <h1 align="center">
-    <a href="https://librechat.ai">LibreChat</a>
-  </h1>
 </p>
-
+<p align="center"><strong>Learning Urban Cognitive Intelligence for Autonomous Buildings</strong></p>
 <p align="center">
-  <a href="https://discord.librechat.ai"> 
-    <img
-      src="https://img.shields.io/discord/1086345563026489514?label=&logo=discord&style=for-the-badge&logoWidth=20&logoColor=white&labelColor=000000&color=blueviolet">
-  </a>
-  <a href="https://www.youtube.com/@LibreChat"> 
-    <img
-      src="https://img.shields.io/badge/YOUTUBE-red.svg?style=for-the-badge&logo=youtube&logoColor=white&labelColor=000000&logoWidth=20">
-  </a>
-  <a href="https://docs.librechat.ai"> 
-    <img
-      src="https://img.shields.io/badge/DOCS-blue.svg?style=for-the-badge&logo=read-the-docs&logoColor=white&labelColor=000000&logoWidth=20">
-  </a>
-  <a aria-label="Sponsors" href="https://github.com/sponsors/danny-avila">
-    <img
-      src="https://img.shields.io/badge/SPONSORS-brightgreen.svg?style=for-the-badge&logo=github-sponsors&logoColor=white&labelColor=000000&logoWidth=20">
+  <a href="https://ewala.es/">
+    <img src="librechat/client/public/assets/EWALA.png" height="40">
   </a>
 </p>
 
-<p align="center">
-<a href="https://railway.app/template/b5k2mn?referralCode=HI9hWz">
-  <img src="https://railway.app/button.svg" alt="Deploy on Railway" height="30">
-</a>
-<a href="https://zeabur.com/templates/0X2ZY8">
-  <img src="https://zeabur.com/button.svg" alt="Deploy on Zeabur" height="30"/>
-</a>
-<a href="https://template.cloud.sealos.io/deploy?templateName=librechat">
-  <img src="https://raw.githubusercontent.com/labring-actions/templates/main/Deploy-on-Sealos.svg" alt="Deploy on Sealos" height="30">
-</a>
-</p>
-
-<p align="center">
-  <a href="https://www.librechat.ai/docs/translation">
-    <img 
-      src="https://img.shields.io/badge/dynamic/json.svg?style=for-the-badge&color=2096F3&label=locize&query=%24.translatedPercentage&url=https://api.locize.app/badgedata/4cb2598b-ed4d-469c-9b04-2ed531a8cb45&suffix=%+translated" 
-      alt="Translation Progress">
-  </a>
-</p>
-
-
-# ✨ Features
-
-- 🖥️ **UI & Experience** inspired by ChatGPT with enhanced design and features
-
-- 🤖 **AI Model Selection**:  
-  - Anthropic (Claude), AWS Bedrock, OpenAI, Azure OpenAI, Google, Vertex AI, OpenAI Responses API (incl. Azure)
-  - [Custom Endpoints](https://www.librechat.ai/docs/quick_start/custom_endpoints): Use any OpenAI-compatible API with LibreChat, no proxy required
-  - Compatible with [Local & Remote AI Providers](https://www.librechat.ai/docs/configuration/librechat_yaml/ai_endpoints):
-    - Ollama, groq, Cohere, Mistral AI, Apple MLX, koboldcpp, together.ai,
-    - OpenRouter, Perplexity, ShuttleAI, Deepseek, Qwen, and more
-
-- 🔧 **[Code Interpreter API](https://www.librechat.ai/docs/features/code_interpreter)**: 
-  - Secure, Sandboxed Execution in Python, Node.js (JS/TS), Go, C/C++, Java, PHP, Rust, and Fortran
-  - Seamless File Handling: Upload, process, and download files directly
-  - No Privacy Concerns: Fully isolated and secure execution
-
-- 🔦 **Agents & Tools Integration**:  
-  - **[LibreChat Agents](https://www.librechat.ai/docs/features/agents)**:
-    - No-Code Custom Assistants: Build specialized, AI-driven helpers
-    - Agent Marketplace: Discover and deploy community-built agents
-    - Collaborative Sharing: Share agents with specific users and groups
-    - Flexible & Extensible: Use MCP Servers, tools, file search, code execution, and more
-    - Compatible with Custom Endpoints, OpenAI, Azure, Anthropic, AWS Bedrock, Google, Vertex AI, Responses API, and more
-    - [Model Context Protocol (MCP) Support](https://modelcontextprotocol.io/clients#librechat) for Tools
-
-- 🔍 **Web Search**:  
-  - Search the internet and retrieve relevant information to enhance your AI context
-  - Combines search providers, content scrapers, and result rerankers for optimal results
-  - **Customizable Jina Reranking**: Configure custom Jina API URLs for reranking services
-  - **[Learn More →](https://www.librechat.ai/docs/features/web_search)**
-
-- 🪄 **Generative UI with Code Artifacts**:  
-  - [Code Artifacts](https://youtu.be/GfTj7O4gmd0?si=WJbdnemZpJzBrJo3) allow creation of React, HTML, and Mermaid diagrams directly in chat
-
-- 🎨 **Image Generation & Editing**
-  - Text-to-image and image-to-image with [GPT-Image-1](https://www.librechat.ai/docs/features/image_gen#1--openai-image-tools-recommended)
-  - Text-to-image with [DALL-E (3/2)](https://www.librechat.ai/docs/features/image_gen#2--dalle-legacy), [Stable Diffusion](https://www.librechat.ai/docs/features/image_gen#3--stable-diffusion-local), [Flux](https://www.librechat.ai/docs/features/image_gen#4--flux), or any [MCP server](https://www.librechat.ai/docs/features/image_gen#5--model-context-protocol-mcp)
-  - Produce stunning visuals from prompts or refine existing images with a single instruction
-
-- 💾 **Presets & Context Management**:  
-  - Create, Save, & Share Custom Presets  
-  - Switch between AI Endpoints and Presets mid-chat
-  - Edit, Resubmit, and Continue Messages with Conversation branching  
-  - Create and share prompts with specific users and groups
-  - [Fork Messages & Conversations](https://www.librechat.ai/docs/features/fork) for Advanced Context control
-
-- 💬 **Multimodal & File Interactions**:  
-  - Upload and analyze images with Claude 3, GPT-4.5, GPT-4o, o1, Llama-Vision, and Gemini 📸  
-  - Chat with Files using Custom Endpoints, OpenAI, Azure, Anthropic, AWS Bedrock, & Google 🗃️
-
-- 🌎 **Multilingual UI**:
-  - English, 中文 (简体), 中文 (繁體), العربية, Deutsch, Español, Français, Italiano
-  - Polski, Português (PT), Português (BR), Русский, 日本語, Svenska, 한국어, Tiếng Việt
-  - Türkçe, Nederlands, עברית, Català, Čeština, Dansk, Eesti, فارسی
-  - Suomi, Magyar, Հայերեն, Bahasa Indonesia, ქართული, Latviešu, ไทย, ئۇيغۇرچە
-
-- 🧠 **Reasoning UI**:  
-  - Dynamic Reasoning UI for Chain-of-Thought/Reasoning AI models like DeepSeek-R1
-
-- 🎨 **Customizable Interface**:  
-  - Customizable Dropdown & Interface that adapts to both power users and newcomers
-
-- 🗣️ **Speech & Audio**:  
-  - Chat hands-free with Speech-to-Text and Text-to-Speech  
-  - Automatically send and play Audio  
-  - Supports OpenAI, Azure OpenAI, and Elevenlabs
-
-- 📥 **Import & Export Conversations**:  
-  - Import Conversations from LibreChat, ChatGPT, Chatbot UI  
-  - Export conversations as screenshots, markdown, text, json
-
-- 🔍 **Search & Discovery**:  
-  - Search all messages/conversations
-
-- 👥 **Multi-User & Secure Access**:
-  - Multi-User, Secure Authentication with OAuth2, LDAP, & Email Login Support
-  - Built-in Moderation, and Token spend tools
-
-- ⚙️ **Configuration & Deployment**:  
-  - Configure Proxy, Reverse Proxy, Docker, & many Deployment options  
-  - Use completely local or deploy on the cloud
-
-- 📖 **Open-Source & Community**:  
-  - Completely Open-Source & Built in Public  
-  - Community-driven development, support, and feedback
-
-[For a thorough review of our features, see our docs here](https://docs.librechat.ai/) 📚
-
-## 🪶 All-In-One AI Conversations with LibreChat
-
-LibreChat brings together the future of assistant AIs with the revolutionary technology of OpenAI's ChatGPT. Celebrating the original styling, LibreChat gives you the ability to integrate multiple AI models. It also integrates and enhances original client features such as conversation and message search, prompt templates and plugins.
-
-With LibreChat, you no longer need to opt for ChatGPT Plus and can instead use free or pay-per-call APIs. We welcome contributions, cloning, and forking to enhance the capabilities of this advanced chatbot platform.
-
-[![Watch the video](https://raw.githubusercontent.com/LibreChat-AI/librechat.ai/main/public/images/changelog/v0.7.6.gif)](https://www.youtube.com/watch?v=ilfwGQtJNlI)
-
-Click on the thumbnail to open the video☝️
 
 ---
 
-## 🌐 Resources
+## 🧠 What is LUCIA?
 
-**GitHub Repo:**
-  - **RAG API:** [github.com/danny-avila/rag_api](https://github.com/danny-avila/rag_api)
-  - **Website:** [github.com/LibreChat-AI/librechat.ai](https://github.com/LibreChat-AI/librechat.ai)
+**LUCIA** is an open-source, local-first, multi-agent AI platform designed for **autonomous decision-making, energy optimization, and intelligent environment control**.
 
-**Other:**
-  - **Website:** [librechat.ai](https://librechat.ai)
-  - **Documentation:** [librechat.ai/docs](https://librechat.ai/docs)
-  - **Blog:** [librechat.ai/blog](https://librechat.ai/blog)
+It combines:
+- Conversational AI (LibreChat)
+- Agentic reasoning (LangChain)
+- Vision-based contextual understanding (Vision LLMs)
+- Real-world actuation (Home Assistant)
+- Governance, evaluation, and rule generation (Setup Wizard)
 
----
-
-## 📝 Changelog
-
-Keep up with the latest updates by visiting the releases page and notes:
-- [Releases](https://github.com/danny-avila/LibreChat/releases)
-- [Changelog](https://www.librechat.ai/changelog) 
-
-**⚠️ Please consult the [changelog](https://www.librechat.ai/changelog) for breaking changes before updating.**
+LUCIA is built to run **fully on-premise**, using **local LLMs via Ollama**, and is designed for **edge, industrial, and privacy-sensitive environments**.
 
 ---
 
-## ⭐ Star History
+## 🧭 Design Principles
 
-<p align="center">
-  <a href="https://star-history.com/#danny-avila/LibreChat&Date">
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=danny-avila/LibreChat&type=Date&theme=dark" onerror="this.src='https://api.star-history.com/svg?repos=danny-avila/LibreChat&type=Date'" />
-  </a>
-</p>
-<p align="center">
-  <a href="https://trendshift.io/repositories/4685" target="_blank" style="padding: 10px;">
-    <img src="https://trendshift.io/api/badge/repositories/4685" alt="danny-avila%2FLibreChat | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
-  </a>
-  <a href="https://runacap.com/ross-index/q1-24/" target="_blank" rel="noopener" style="margin-left: 20px;">
-    <img style="width: 260px; height: 56px" src="https://runacap.com/wp-content/uploads/2024/04/ROSS_badge_white_Q1_2024.svg" alt="ROSS Index - Fastest Growing Open-Source Startups in Q1 2024 | Runa Capital" width="260" height="56"/>
-  </a>
-</p>
+- Local-first and privacy-preserving by default
+- Explainability over black-box automation
+- Human-in-the-loop governance
+- Modular, replaceable components
+- Edge-ready, cloud-optional
 
 ---
 
-## ✨ Contributions
+## 🎯 Target Use Cases
 
-Contributions, suggestions, bug reports and fixes are welcome!
-
-For new features, components, or extensions, please open an issue and discuss before sending a PR.
-
-If you'd like to help translate LibreChat into your language, we'd love your contribution! Improving our translations not only makes LibreChat more accessible to users around the world but also enhances the overall user experience. Please check out our [Translation Guide](https://www.librechat.ai/docs/translation).
-
----
-
-## 💖 This project exists in its current state thanks to all the people who contribute
-
-<a href="https://github.com/danny-avila/LibreChat/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=danny-avila/LibreChat" />
-</a>
+- Smart buildings & energy optimization
+- Industrial automation
+- Research & experimentation
+- Edge AI deployments (Edge ≠ “Raspberry Pi”)
+- Privacy-first AI systems
+- Human-in-the-loop autonomous systems
 
 ---
 
-## 🎉 Special Thanks
+## ✨ Core Features
 
-We thank [Locize](https://locize.com) for their translation management tools that support multiple languages in LibreChat.
+### 🤖 Multi-Agent Architecture
+- Autonomous AI agents powered by **LangChain**
+- Clear separation of responsibilities:
+  - Decision-making agents
+  - Evaluation agents
+  - Rule-generation agents
+  - Chat-driven command agents
+- Agents can:
+  - Analyze structured data
+  - Consume sensor history
+  - Use vision-based context
+  - Generate explainable decisions
+  - Propose and manage automation rules
 
-<p align="center">
-  <a href="https://locize.com" target="_blank" rel="noopener noreferrer">
-    <img src="https://github.com/user-attachments/assets/d6b70894-6064-475e-bb65-92a9e23e0077" alt="Locize Logo" height="50">
-  </a>
-</p>
+---
+
+### 💬 Conversational Interface (LibreChat)
+- LibreChat as the **main UI**
+- Native support for:
+  - MCP (Model Context Protocol)
+  - Tool calling
+  - Streaming responses
+- Agents are exposed to the chat via MCP servers
+- Users can **interact directly with agents** as first-class chat participants
+
+---
+
+### 🔌 MCP-Driven Integration
+LUCIA makes extensive use of **Model Context Protocol (MCP)**:
+
+- **LangChain Agent MCP**
+  - Exposes the agent system to LibreChat
+  - Enables chat-driven actions and reasoning
+
+- **Home Assistant MCP**
+  - Allows agents to read sensor data
+  - Enables agents to trigger real-world actions
+
+This architecture keeps LUCIA modular, extensible, and future-proof.
+
+---
+
+### 👁️ Vision-Aware Intelligence
+- Vision LLM integration via **Home Assistant HAC (VisionLLM)**
+- Vision agents can:
+  - Analyze images
+  - Generate semantic scene descriptions or JSON Response.
+  - Persist contextual knowledge as HA entities
+- Enables reasoning like:
+  > “The room is empty, lights are on, and sunlight is sufficient.”
+
+---
+
+### 🧩 Setup Wizard (Governance)
+The Setup Wizard is a dedicated UI and backend for **governing AI behavior**:
+
+- Select entities of interest (sensors, zones, devices)
+- Review AI-generated decisions
+- Score and evaluate agent behavior
+- Automatically generate rules based on evaluations
+- Manage rules created by:
+  - Human users
+  - Evaluation agents
+  - Chat-command agents
+
+This provides **human-in-the-loop control** over autonomous systems.
+
+---
+
+## 🏗️ High-Level Architecture
+
+```
+User
+ ↓
+LibreChat
+ ↓
+MCP Servers
+ ├─ LangChain MCP
+ └─ Home Assistant MCP
+ ↓
+LangChain Backend
+ ↓
+Ollama (Local LLMs)
+ ↓
+Decisions / Rules
+ ↓
+Home Assistant (Execution)
+```
+All components are orchestrated using **Docker Compose**.
+
+---
+
+## 🧪 Model Strategy
+
+LUCIA supports two deployment modes for Ollama:
+
+### 🔹 Single-Model Mode (Not Recommended)
+- One model handles:
+  - Reasoning
+  - Tool calling
+  - Vision
+- Useful for demos or constrained hardware
+
+Example:
+```
+aliafshar/gemma3-it-qat-tools:12b
+```
+
+
+### 🔹 Dual-Model Mode (Recommended)
+
+| Purpose | Model | VRAM |
+|------|------|------|
+| Reasoning & tools | gemma3-it-qat-tools:12b | ~12–13 GB |
+| Vision | qwen2.5vl:7b | ~8–9 GB |
+
+Minimum recommended VRAM: **24 GB**.
+
+---
+
+## 🧰 Technology Stack
+
+### Frontend
+- LibreChat Client (Vite + React + TypeScript)
+- Setup Wizard Frontend (Vite + React)
+
+### Backend
+- LibreChat API (Next.js)
+- LangChain Backend (FastAPI)
+- LangChain MCP (FastMCP)
+- Setup Wizard Backend (Flask + Gunicorn)
+
+### Infrastructure
+- Docker & Docker Compose
+- MongoDB (LibreChat)
+- PostgreSQL + pgvector (RAG)
+- SQLite (decisions, rules, governance)
+- MeiliSearch (search & indexing)
+
+### Core Components and Licenses
+
+| Component | Description | Technology | License |
+|--------|------------|-----------|---------|
+| LibreChat Client | Conversational web interface | React, Vite | MIT |
+| LibreChat API | Backend for chat, auth, models, MCP | Node.js / Next.js | MIT |
+| LangChain Backend | Agentic reasoning and decision engine | Python, FastAPI, LangChain | MIT |
+| LangChain MCP | MCP server exposing agents to LibreChat | FastMCP | MIT |
+| Setup Wizard Frontend | Governance & evaluation UI | React, Vite | MIT |
+| Setup Wizard Backend | Rules, decisions & governance API | Python, Flask | MIT |
+| Ollama | Local LLM and Vision inference engine | Go | Apache 2.0 |
+| VisionLLM HAC | Vision integration for Home Assistant | Python | Apache 2.0 |
+| Home Assistant | Building automation platform | Python | Apache 2.0 |
+| MongoDB | LibreChat persistence | MongoDB | SSPL / MongoDB License |
+| PostgreSQL | Relational & vector DB | PostgreSQL + pgvector | PostgreSQL License |
+| MeiliSearch | Search & indexing engine | Rust | MIT |
+| Docker & Docker Compose | Container orchestration | Docker | Apache 2.0 |
+
+> ⚠️ Note on licensing  
+> While LUCIA itself is released under the MIT License, it integrates
+> third-party components that are distributed under their own licenses.
+> Users are responsible for ensuring compliance with all applicable licenses,
+> especially when deploying in commercial or production environments.
+
+---
+
+## 📂 Project Structure (Simplified)
+```
+.
+├── docker-compose.yml
+├── env/
+│ ├── lucia.env
+│ └── librechat.env
+├── librechat/
+├── services/
+│ ├── lang_chain_backend/
+│ └── setup-wizard-microservice/
+├── db/
+├── docker/
+└── README.md
+```
+
+---
+
+## 🚀 Deployment (Summary)
+
+1. Install Docker & Docker Compose
+2. Install and run Ollama on the host or a GPU node
+3. Configure environment files:
+   - `.env`
+   - `env/lucia.env`
+   - `env/librechat.env`
+   - `librechat/librechat.yaml`
+4. Build and start:
+   ```bash
+   docker compose build
+   docker compose up -d
+   ```
+
+---
+
+## 🔐 Security
+- Default deployment uses HTTP (local/dev)
+
+- Production deployments should include:
+    - Reverse proxy (Nginx or Traefik)
+    - TLS certificates (Let’s Encrypt)
+    - Firewall rules
+    - Secure Home Assistant tokens
+    - Regular backups of volumes
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License**.  
+See the [LICENSE](LICENSE) file for details.
+
+---
+
+> ⚠️ This repository focuses on orchestration and integration.  
+> Hardware provisioning, GPU drivers, and Home Assistant setup are assumed to be managed externally.
